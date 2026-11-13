@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Your Name — Portfolio</title>
+<meta name="description" content="Portfolio of Your Name">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ===== Colors — change here to restyle the whole site ===== */
+  :root{
+    --bg:#f5f2ec; --bg-alt:#ebe6dd; --card:#fbf9f5;
+    --ink:#1c1b19; --ink-2:#3d3a35; --muted:#5c5852; --line-soft:#d6d0c6;
+    --accent:oklch(0.55 0.15 35); --accent-light:oklch(0.75 0.13 35);
+    --pad:clamp(20px,4vw,48px); --section:clamp(48px,8vw,96px);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+  a:hover{color:var(--accent)}
+  h1,h2,h3{font-family:'Instrument Serif',serif;font-weight:400;margin:0}
+  p{margin:0;text-wrap:pretty}
+  em.accent{color:var(--accent)}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 var(--pad)}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .h2{font-size:clamp(40px,5.5vw,68px);line-height:1}
+  .lead{font-size:17px;line-height:1.65;color:var(--ink-2);max-width:560px}
+  .placeholder{background:repeating-linear-gradient(135deg,var(--bg-alt) 0 10px,var(--bg) 10px 20px);display:flex;align-items:flex-end;padding:14px}
+  .placeholder span{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:var(--bg);padding:4px 8px}
+  .placeholder img{width:100%;height:100%;object-fit:cover;display:block}
+  .has-img{padding:0}
+
+  /* Header */
+  .topbar{display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--ink);padding:28px 0 14px}
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;padding:40px 0 24px;border-bottom:1px solid var(--ink)}
+  .masthead h1{font-size:clamp(56px,10vw,128px);line-height:.9;letter-spacing:-.02em}
+  .masthead p{margin-top:14px;font-size:18px;color:var(--muted)}
+  nav{display:flex;flex-wrap:wrap;gap:22px;font-size:14px;font-weight:500}
+  nav a{text-decoration:none}
+
+  /* Sections */
+  section{padding:var(--section) 0}
+  .bordered{border-top:1px solid var(--ink)}
+  .sec-head{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:32px;align-items:end;margin-bottom:48px}
+  .sec-head .num{display:flex;align-items:baseline;gap:14px}
+  .sec-head .num b{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:var(--accent)}
+  .sec-head h2{margin-bottom:16px}
+
+  /* About */
+  .about{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(32px,5vw,72px)}
+  .about .photo-col{display:flex;flex-direction:column;gap:14px}
+  .about .photo{aspect-ratio:4/5;border:1px solid var(--ink)}
+  .about .photo-meta{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+  .about .photo-meta em{font-family:'Instrument Serif',serif;font-size:16px}
+  .about .text{display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:620px}
+  .about .text p{font-size:17px;line-height:1.65}
+
+  /* Focus grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+  .cell{padding:28px 26px 34px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;gap:14px;min-height:220px;transition:background .2s}
+  .cell:hover{background:var(--bg-alt)}
+  .cell .n{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+  .cell h3{font-size:30px;line-height:1.1}
+  .cell p{font-size:15px;line-height:1.6;color:var(--ink-2)}
+
+  /* Quote */
+  .quote{background:var(--ink);color:var(--bg);padding:clamp(64px,10vw,128px) var(--pad)}
+  .quote .inner{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:28px;text-align:center;align-items:center}
+  .quote .mono{color:#b4ada3}
+  .quote h2{font-size:clamp(40px,6.5vw,84px);line-height:1;letter-spacing:-.01em;text-wrap:balance}
+  .quote h2 em{color:var(--accent-light)}
+  .quote p{font-size:17px;line-height:1.7;color:var(--line-soft);max-width:640px}
+  .quote .qd{display:flex;align-items:center;gap:18px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.1em;color:#b4ada3}
+  .quote .qd span.q{font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent-light)}
+
+  /* Work list */
+  .list{border-top:1px solid var(--ink)}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:20px 40px;padding:30px 0;border-bottom:1px solid var(--ink);text-decoration:none;color:var(--ink);transition:padding .25s}
+  .row:hover{padding-left:12px;color:var(--ink)}
+  .row .venue{display:flex;flex-direction:column;gap:6px}
+  .row .venue strong{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;line-height:1}
+  .row .venue strong span{color:var(--accent)}
+  .row .venue small{font-size:13px;color:var(--muted);line-height:1.5}
+  .row .info{display:flex;flex-direction:column;gap:10px;grid-column:span 2}
+  .row .info h3{font-size:clamp(24px,2.6vw,32px);line-height:1.15}
+  .row .info span{font-size:14px;color:var(--muted)}
+  @media (max-width:560px){.row .info{grid-column:auto}}
+
+  /* Projects */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}
+  .card{border:1px solid var(--ink);background:var(--card);display:flex;flex-direction:column}
+  .card .shot{aspect-ratio:16/9;border-bottom:1px solid var(--ink)}
+  .card .body{padding:28px;display:flex;flex-direction:column;gap:16px;flex:1}
+  .card h3{font-size:40px;line-height:1}
+  .card p{font-size:16px;line-height:1.6;color:var(--ink-2)}
+  .card ol{list-style:none;margin:auto 0 0;padding:0;border-top:1px solid var(--line-soft)}
+  .card li{display:grid;grid-template-columns:36px 1fr;gap:8px;padding:12px 0;border-bottom:1px solid var(--line-soft);font-size:14px;line-height:1.5}
+  .card li b{font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--accent)}
+  .card li strong{font-weight:600}
+  .partners{margin-top:32px;font-size:16px;line-height:1.6;max-width:760px}
+
+  /* Contact */
+  .contact{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:clamp(32px,5vw,72px);padding-bottom:clamp(32px,5vw,64px)}
+  .contact .left{display:flex;flex-direction:column;gap:20px}
+  .contact h2{font-size:clamp(48px,7vw,96px);line-height:.95;letter-spacing:-.01em}
+  .contact dl{margin:0;border-top:1px solid var(--ink);display:flex;flex-direction:column}
+  .contact dl div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:20px 0;border-bottom:1px solid var(--ink)}
+  .contact dt{padding-top:4px}
+  .contact dd{margin:0;font-family:'Instrument Serif',serif;font-size:26px;word-break:break-word}
+  .btn{display:inline-block;margin-top:28px;background:var(--ink);color:var(--bg);text-decoration:none;padding:16px 26px;font-weight:500;font-size:15px;transition:background .2s}
+  .btn:hover{background:var(--accent);color:var(--bg)}
+
+  footer .bar{border-top:1px solid var(--ink);padding:20px 0 36px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+  footer strong{color:var(--ink)}
+</style>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header id="top" class="wrap">
+  <div class="topbar mono">
+    <span>Your Name · Portfolio</span>
+    <span>Security · Research · Engineering</span>
+  </div>
+  <div class="masthead">
+    <div>
+      <h1>Your Name</h1>
+      <p>Security Researcher · Builder</p>
+    </div>
+    <nav>
+      <a href="#about">About</a>
+      <a href="#focus">Focus</a>
+      <a href="#work">Work</a>
+      <a href="#projects">Projects</a>
+      <a href="#contact">Contact</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================== ABOUT ===================== -->
+  <section id="about" class="about">
+    <div class="photo-col">
+      <span class="mono">A little about me</span>
+      <!-- To add your photo: upload it (e.g. me.jpg) and replace the <span> below with: <img src="me.jpg" alt="Your Name"> and add class "has-img" to this div -->
+      <div class="photo placeholder"><span>portrait photo</span></div>
+      <div class="photo-meta">
+        <span>Name: Your Name <em>/pronunciation/</em></span>
+        <a href="#projects">View projects ↘</a>
+      </div>
+    </div>
+    <div class="text">
+      <h2 class="h2">Hello, I'm <em class="accent">Your Name.</em></h2>
+      <p>I hold a degree in Your Field from Your University and work as a Role at <a href="#">Your Organisation</a>.</p>
+      <p>My work sits at the intersection of <strong>research, engineering and real-world impact</strong>. Describe what drives you, what you build, and the problems you care about in two or three sentences.</p>
+      <p>One sentence on your belief or approach — <strong>the line you want people to remember.</strong></p>
+    </div>
+  </section>
+
+  <!-- ===================== 01 FOCUS ===================== -->
+  <section id="focus" class="bordered">
+    <div class="sec-head">
+      <div class="num"><b>01</b><span class="mono">Areas of focus</span></div>
+      <div>
+        <h2 class="h2">Work that <em>actually</em> holds up.</h2>
+        <p class="lead">A short paragraph summarising your interests and what ties them together.</p>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="cell"><span class="n">01</span><h3>Web Application Security</h3><p>Finding and explaining vulnerabilities — injection, auth flaws, access control — with clear, reproducible writeups.</p></div>
+      <div class="cell"><span class="n">02</span><h3>Threat Detection &amp; SOC</h3><p>Building detection rules, triaging alerts, and turning noisy logs into signals a team can act on.</p></div>
+      <div class="cell"><span class="n">03</span><h3>Cloud &amp; Infrastructure</h3><p>Hardening configurations and reviewing architectures for misconfiguration and privilege risk.</p></div>
+      <div class="cell"><span class="n">04</span><h3>Offensive Tooling</h3><p>Small, sharp tools and scripts that speed up recon, fuzzing and reporting.</p></div>
+      <div class="cell"><span class="n">05</span><h3>Applied AI for Security</h3><p>Exploring where language models help — and where they mislead — in security workflows.</p></div>
+      <div class="cell"><span class="n">06</span><h3>Teaching &amp; Writing</h3><p>Sharing methodology through labs, talks and walkthroughs so others can learn faster.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== QUOTE ===================== -->
+<section class="quote">
+  <div class="inner">
+    <span class="mono">A note on the work</span>
+    <h2>Every system has a story <em>it hasn't told yet.</em></h2>
+    <p>A short personal reflection — why you do this work, and what keeps you curious.</p>
+    <div class="qd"><span>QUESTION</span><span class="q">?</span><span>DISCOVERY</span></div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <!-- ===================== 02 WORK ===================== -->
+  <section id="work">
+    <div class="sec-head">
+      <div class="num"><b>02</b><span class="mono">Selected work</span></div>
+      <div>
+        <h2 class="h2">My work.</h2>
+        <p class="lead">Papers, writeups, talks or certifications — the evidence behind the claims.</p>
+      </div>
+    </div>
+    <div class="list">
+      <a class="row" href="#">
+        <div class="venue"><strong>Conference <span>2026</span></strong><small>Talk · Main track</small></div>
+        <div class="info"><h3>Title of your paper, talk or major writeup goes here ↗</h3><span>Co-author, Your Name, Co-author</span></div>
+      </a>
+      <a class="row" href="#">
+        <div class="venue"><strong>CTF <span>2025</span></strong><small>Team placement · Finals</small></div>
+        <div class="info"><h3>Competition name — placement and the challenge you are proudest of ↗</h3><span>Team name</span></div>
+      </a>
+      <a class="row" href="#">
+        <div class="venue"><strong>Cert <span>2025</span></strong><small>Professional certification</small></div>
+        <div class="info"><h3>Certification name and the skills it proves ↗</h3><span>Issuing body</span></div>
+      </a>
+    </div>
+    <p style="margin-top:28px"><a href="#" style="font-weight:500">View all work ↗</a></p>
+  </section>
+
+  <!-- ===================== 03 PROJECTS ===================== -->
+  <section id="projects" class="bordered">
+    <div class="sec-head">
+      <div class="num"><b>03</b><span class="mono">Projects &amp; products</span></div>
+      <div>
+        <h2 class="h2">Building things <em>people can use.</em></h2>
+        <p class="lead">The belief behind what you build, in one or two sentences.</p>
+      </div>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <div class="shot placeholder"><span>product screenshot</span></div>
+        <div class="body">
+          <span class="mono">01 · Project</span>
+          <h3>Project One</h3>
+          <p>What it is, who it helps, and the outcome it delivers — in two sentences.</p>
+          <ol>
+            <li><b>01</b><span><strong>Problem</strong> — the pain point it addresses.</span></li>
+            <li><b>02</b><span><strong>Approach</strong> — how you solved it.</span></li>
+            <li><b>03</b><span><strong>Result</strong> — a concrete, measurable outcome.</span></li>
+          </ol>
+        </div>
+      </article>
+      <article class="card">
+        <div class="shot placeholder"><span>product screenshot</span></div>
+        <div class="body">
+          <span class="mono">02 · Project</span>
+          <h3>Project Two</h3>
+          <p>What it is, who it helps, and the outcome it delivers — in two sentences.</p>
+          <ol>
+            <li><b>01</b><span><strong>Problem</strong> — the pain point it addresses.</span></li>
+            <li><b>02</b><span><strong>Approach</strong> — how you solved it.</span></li>
+            <li><b>03</b><span><strong>Result</strong> — a concrete, measurable outcome.</span></li>
+          </ol>
+        </div>
+      </article>
+    </div>
+    <p class="partners"><strong>For partners and teams</strong> — I'm open to conversations about collaboration and new opportunities. <a href="#contact">Start a conversation ↗</a></p>
+  </section>
+
+  <!-- ===================== CONTACT ===================== -->
+  <section id="contact" class="bordered contact">
+    <div class="left">
+      <span class="mono">Let's build something meaningful</span>
+      <h2>Open to the right <em class="accent">conversation.</em></h2>
+      <p class="lead">Who you want to hear from, and what you'd like to work on together.</p>
+    </div>
+    <div>
+      <dl>
+        <div><dt class="mono">Email</dt><dd><a href="mailto:you@example.com">you@example.com</a></dd></div>
+        <div><dt class="mono">LinkedIn</dt><dd><a href="#">Connect with me ↗</a></dd></div>
+        <div><dt class="mono">GitHub</dt><dd><a href="#">github.com/you ↗</a></dd></div>
+        <div><dt class="mono">Based in</dt><dd>Ha Noi, Vietnam</dd></div>
+      </dl>
+      <a class="btn" href="mailto:you@example.com">Start a conversation ↗</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="wrap">
+  <div class="bar">
+    <span><strong>Your Name</strong> · Security Researcher &amp; Builder</span>
+    <a href="#top">Back to top ↑</a>
+    <span>© 2026 Your Name</span>
+  </div>
+</footer>
+
+</body>
+</html>
