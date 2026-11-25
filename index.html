@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ha Nguyen — Portfolio</title>
+<meta name="description" content="Portfolio of Ha Nguyen">
+<link rel="icon" type="image/svg+xml" href="favicon/favicon-terminal.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ===== Colors — change here to restyle the whole site ===== */
+  :root{
+    --bg:#f5f2ec; --bg-alt:#ebe6dd; --card:#fbf9f5;
+    --ink:#1c1b19; --ink-2:#3d3a35; --muted:#5c5852; --line-soft:#d6d0c6;
+    --accent:oklch(0.55 0.15 35); --accent-light:oklch(0.75 0.13 35);
+    --pad:clamp(20px,4vw,48px); --section:clamp(48px,8vw,96px);
+  }
+  /* ===== Language: elements with class "en" / "vi" show only in that language ===== */
+  html[lang="en"] .vi, html[lang="vi"] .en{display:none !important}
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+  a:hover{color:var(--accent)}
+  h1,h2,h3{font-family:'Instrument Serif',serif;font-weight:400;margin:0}
+  p{margin:0;text-wrap:pretty}
+  em.accent{color:var(--accent)}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 var(--pad)}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .h2{font-size:clamp(40px,5.5vw,68px);line-height:1}
+  .lead{font-size:17px;line-height:1.65;color:var(--ink-2);max-width:560px}
+  .placeholder{background:repeating-linear-gradient(135deg,var(--bg-alt) 0 10px,var(--bg) 10px 20px);display:flex;align-items:flex-end;padding:14px}
+  .placeholder span{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:var(--bg);padding:4px 8px}
+  .placeholder img{width:100%;height:100%;object-fit:cover;display:block}
+  .has-img{padding:0}
+
+  /* Header */
+  .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--ink);padding:28px 0 14px}
+  .topbar .right{display:flex;align-items:center;gap:18px}
+  .lang{display:flex;border:1px solid var(--ink)}
+  .lang button{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;border:0;background:transparent;color:var(--ink);padding:6px 10px;cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+  .masthead{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;padding:40px 0 24px;border-bottom:1px solid var(--ink)}
+  .masthead h1{font-size:clamp(56px,10vw,128px);line-height:.9;letter-spacing:-.02em}
+  .masthead p{margin-top:14px;font-size:18px;color:var(--muted)}
+  nav{display:flex;flex-wrap:wrap;gap:22px;font-size:14px;font-weight:500}
+  nav a{text-decoration:none}
+
+  /* Sections */
+  section{padding:var(--section) 0}
+  .bordered{border-top:1px solid var(--ink)}
+  .sec-head{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:32px;align-items:end;margin-bottom:48px}
+  .sec-head .num{display:flex;align-items:baseline;gap:14px}
+  .sec-head .num b{font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:500;color:var(--accent)}
+  .sec-head h2{margin-bottom:16px}
+
+  /* About */
+  .about{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:clamp(32px,5vw,72px)}
+  .about .photo-col{display:flex;flex-direction:column;gap:14px}
+  .about .photo{aspect-ratio:4/5;border:1px solid var(--ink)}
+  .about .photo-meta{display:flex;justify-content:space-between;gap:12px;font-size:13px;color:var(--muted)}
+  .about .photo-meta em{font-family:'Instrument Serif',serif;font-size:16px}
+  .about .text{display:flex;flex-direction:column;justify-content:center;gap:22px;max-width:620px}
+  .about .text p{font-size:17px;line-height:1.65}
+
+  /* Focus grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+  .cell{padding:28px 26px 34px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);display:flex;flex-direction:column;gap:14px;min-height:220px;transition:background .2s}
+  .cell:hover{background:var(--bg-alt)}
+  .cell .n{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+  .cell h3{font-size:30px;line-height:1.1}
+  .cell p{font-size:15px;line-height:1.6;color:var(--ink-2)}
+
+  /* Quote */
+  .quote{background:var(--ink);color:var(--bg);padding:clamp(64px,10vw,128px) var(--pad)}
+  .quote .inner{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:28px;text-align:center;align-items:center}
+  .quote .mono{color:#b4ada3}
+  .quote h2{font-size:clamp(40px,6.5vw,84px);line-height:1;letter-spacing:-.01em;text-wrap:balance}
+  .quote h2 em{color:var(--accent-light)}
+  .quote p{font-size:17px;line-height:1.7;color:var(--line-soft);max-width:640px}
+  .quote .qd{display:flex;align-items:center;gap:18px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:.1em;color:#b4ada3}
+  .quote .qd span.q{font-family:'Instrument Serif',serif;font-size:32px;color:var(--accent-light)}
+
+  /* Work list */
+  .list{border-top:1px solid var(--ink)}
+  .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:20px 40px;padding:30px 0;border-bottom:1px solid var(--ink);text-decoration:none;color:var(--ink);transition:padding .25s}
+  .row:hover{padding-left:12px;color:var(--ink)}
+  .row .venue{display:flex;flex-direction:column;gap:6px}
+  .row .venue strong{font-family:'Instrument Serif',serif;font-weight:400;font-size:36px;line-height:1}
+  .row .venue strong span{color:var(--accent)}
+  .row .venue small{font-size:13px;color:var(--muted);line-height:1.5}
+  .row .info{display:flex;flex-direction:column;gap:10px;grid-column:span 2}
+  .row .info h3{font-size:clamp(24px,2.6vw,32px);line-height:1.15}
+  .row .info > span{font-size:14px;color:var(--muted)}
+  @media (max-width:560px){.row .info{grid-column:auto}}
+
+  /* Projects */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px}
+  .card{border:1px solid var(--ink);background:var(--card);display:flex;flex-direction:column}
+  .card .shot{aspect-ratio:16/9;border-bottom:1px solid var(--ink)}
+  .card .body{padding:28px;display:flex;flex-direction:column;gap:16px;flex:1}
+  .card h3{font-size:40px;line-height:1}
+  .card p{font-size:16px;line-height:1.6;color:var(--ink-2)}
+  .card ol{list-style:none;margin:auto 0 0;padding:0;border-top:1px solid var(--line-soft)}
+  .card li{display:grid;grid-template-columns:36px 1fr;gap:8px;padding:12px 0;border-bottom:1px solid var(--line-soft);font-size:14px;line-height:1.5}
+  .card li b{font-family:'IBM Plex Mono',monospace;font-weight:400;color:var(--accent)}
+  .card li strong{font-weight:600}
+  .partners{margin-top:32px;font-size:16px;line-height:1.6;max-width:760px}
+
+  /* Contact */
+  .contact{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:clamp(32px,5vw,72px);padding-bottom:clamp(32px,5vw,64px)}
+  .contact .left{display:flex;flex-direction:column;gap:20px}
+  .contact h2{font-size:clamp(48px,7vw,96px);line-height:.95;letter-spacing:-.01em}
+  .contact dl{margin:0;border-top:1px solid var(--ink);display:flex;flex-direction:column}
+  .contact dl div{display:grid;grid-template-columns:120px 1fr;gap:12px;padding:20px 0;border-bottom:1px solid var(--ink)}
+  .contact dt{padding-top:4px}
+  .contact dd{margin:0;font-family:'Instrument Serif',serif;font-size:26px;word-break:break-word}
+  .btn{display:inline-block;margin-top:28px;background:var(--ink);color:var(--bg);text-decoration:none;padding:16px 26px;font-weight:500;font-size:15px;transition:background .2s}
+  .btn:hover{background:var(--accent);color:var(--bg)}
+
+  footer .bar{border-top:1px solid var(--ink);padding:20px 0 36px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+  footer strong{color:var(--ink)}
+</style>
+<script>
+  // Pick language before page paints: saved choice → browser language → English
+  (function(){
+    var l = localStorage.getItem('site-lang') || ((navigator.language||'').toLowerCase().startsWith('vi') ? 'vi' : 'en');
+    document.documentElement.lang = l;
+  })();
+</script>
+</head>
+<body>
+
+<!-- ===================== HEADER ===================== -->
+<header id="top" class="wrap">
+  <div class="topbar mono">
+    <span>Ha Nguyen · Portfolio</span>
+    <div class="right">
+      <span class="en">Security · Research · Engineering</span>
+      <span class="vi">Bảo mật · Nghiên cứu · Kỹ thuật</span>
+      <div class="lang" role="group" aria-label="Language">
+        <button data-lang="en">EN</button><button data-lang="vi">VI</button>
+      </div>
+    </div>
+  </div>
+  <div class="masthead">
+    <div>
+      <h1>Ha Nguyen</h1>
+      <p class="en">Security Researcher · Builder</p>
+      <p class="vi">Nghiên cứu bảo mật · Xây dựng sản phẩm</p>
+    </div>
+    <nav>
+      <a href="#about"><span class="en">About</span><span class="vi">Giới thiệu</span></a>
+      <a href="#focus"><span class="en">Focus</span><span class="vi">Lĩnh vực</span></a>
+      <a href="#work"><span class="en">Work</span><span class="vi">Thành tích</span></a>
+      <a href="#projects"><span class="en">Projects</span><span class="vi">Dự án</span></a>
+      <a href="library.html"><span class="en">Library</span><span class="vi">Thư viện</span></a>
+      <a href="#contact"><span class="en">Contact</span><span class="vi">Liên hệ</span></a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ===================== ABOUT ===================== -->
+  <section id="about" class="about">
+    <div class="photo-col">
+      <span class="mono"><span class="en">A little about me</span><span class="vi">Đôi nét về tôi</span></span>
+      <!-- To add your photo: upload it (e.g. me.jpg) and replace the <span> below with: <img src="me.jpg" alt="Ha Nguyen"> and add class "has-img" to this div -->
+      <div class="photo placeholder"><span class="en">portrait photo</span><span class="vi">ảnh chân dung</span></div>
+      <div class="photo-meta">
+        <span><span class="en">Name:</span><span class="vi">Tên:</span> Ha Nguyen <em>/pronunciation/</em></span>
+        <a href="#projects"><span class="en">View projects ↘</span><span class="vi">Xem dự án ↘</span></a>
+      </div>
+    </div>
+    <div class="text">
+      <h2 class="h2 en">Hello, I'm <em class="accent">Ha Nguyen.</em></h2>
+      <h2 class="h2 vi">Xin chào, tôi là <em class="accent">Ha Nguyen.</em></h2>
+      <p class="en">I hold a degree in Your Field from Your University and work as a Role at <a href="#">Your Organisation</a>.</p>
+      <p class="vi">Tôi tốt nghiệp ngành Your Field tại Your University và đang làm Role tại <a href="#">Your Organisation</a>.</p>
+      <p class="en">My work sits at the intersection of <strong>research, engineering and real-world impact</strong>. Describe what drives you, what you build, and the problems you care about in two or three sentences.</p>
+      <p class="vi">Công việc của tôi nằm ở giao điểm giữa <strong>nghiên cứu, kỹ thuật và tác động thực tế</strong>. Mô tả điều thúc đẩy bạn, những gì bạn xây dựng và vấn đề bạn quan tâm trong hai, ba câu.</p>
+      <p class="en">One sentence on your belief or approach — <strong>the line you want people to remember.</strong></p>
+      <p class="vi">Một câu về niềm tin hay cách làm của bạn — <strong>câu bạn muốn mọi người nhớ.</strong></p>
+    </div>
+  </section>
+
+  <!-- ===================== 01 FOCUS ===================== -->
+  <section id="focus" class="bordered">
+    <div class="sec-head">
+      <div class="num"><b>01</b><span class="mono"><span class="en">Areas of focus</span><span class="vi">Lĩnh vực trọng tâm</span></span></div>
+      <div>
+        <h2 class="h2 en">Work that <em>actually</em> holds up.</h2>
+        <h2 class="h2 vi">Làm việc <em>thật sự</em> vững chắc.</h2>
+        <p class="lead en">A short paragraph summarising your interests and what ties them together.</p>
+        <p class="lead vi">Một đoạn ngắn tóm tắt mối quan tâm của bạn và điều kết nối chúng.</p>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="cell"><span class="n">01</span>
+        <h3 class="en">Web Application Security</h3><h3 class="vi">Bảo mật ứng dụng web</h3>
+        <p class="en">Finding and explaining vulnerabilities — injection, auth flaws, access control — with clear, reproducible writeups.</p>
+        <p class="vi">Tìm và giải thích lỗ hổng — injection, lỗi xác thực, phân quyền — bằng các bài viết rõ ràng, tái hiện được.</p></div>
+      <div class="cell"><span class="n">02</span>
+        <h3 class="en">Threat Detection &amp; SOC</h3><h3 class="vi">Phát hiện mối đe dọa &amp; SOC</h3>
+        <p class="en">Building detection rules, triaging alerts, and turning noisy logs into signals a team can act on.</p>
+        <p class="vi">Xây dựng rule phát hiện, phân loại cảnh báo, biến log nhiễu thành tín hiệu đội ngũ có thể hành động.</p></div>
+      <div class="cell"><span class="n">03</span>
+        <h3 class="en">Cloud &amp; Infrastructure</h3><h3 class="vi">Cloud &amp; Hạ tầng</h3>
+        <p class="en">Hardening configurations and reviewing architectures for misconfiguration and privilege risk.</p>
+        <p class="vi">Gia cố cấu hình và rà soát kiến trúc để tìm lỗi cấu hình và rủi ro phân quyền.</p></div>
+      <div class="cell"><span class="n">04</span>
+        <h3 class="en">Offensive Tooling</h3><h3 class="vi">Công cụ tấn công</h3>
+        <p class="en">Small, sharp tools and scripts that speed up recon, fuzzing and reporting.</p>
+        <p class="vi">Công cụ và script gọn nhẹ giúp tăng tốc trinh sát, fuzzing và viết báo cáo.</p></div>
+      <div class="cell"><span class="n">05</span>
+        <h3 class="en">Applied AI for Security</h3><h3 class="vi">AI ứng dụng cho bảo mật</h3>
+        <p class="en">Exploring where language models help — and where they mislead — in security workflows.</p>
+        <p class="vi">Tìm hiểu mô hình ngôn ngữ giúp ích — và gây sai lệch — ở đâu trong quy trình bảo mật.</p></div>
+      <div class="cell"><span class="n">06</span>
+        <h3 class="en">Teaching &amp; Writing</h3><h3 class="vi">Giảng dạy &amp; Viết bài</h3>
+        <p class="en">Sharing methodology through labs, talks and walkthroughs so others can learn faster.</p>
+        <p class="vi">Chia sẻ phương pháp qua lab, bài nói và hướng dẫn để người khác học nhanh hơn.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== QUOTE ===================== -->
+<section class="quote">
+  <div class="inner">
+    <span class="mono"><span class="en">A note on the work</span><span class="vi">Đôi lời về công việc</span></span>
+    <h2 class="en">Every system has a story <em>it hasn't told yet.</em></h2>
+    <h2 class="vi">Mỗi hệ thống đều có một câu chuyện <em>chưa kể.</em></h2>
+    <p class="en">A short personal reflection — why you do this work, and what keeps you curious.</p>
+    <p class="vi">Một suy nghĩ ngắn — vì sao bạn làm công việc này, và điều gì giữ bạn luôn tò mò.</p>
+    <div class="qd">
+      <span class="en">QUESTION</span><span class="vi">CÂU HỎI</span>
+      <span class="q">?</span>
+      <span class="en">DISCOVERY</span><span class="vi">KHÁM PHÁ</span>
+    </div>
+  </div>
+</section>
+
+<main class="wrap">
+
+  <!-- ===================== 02 WORK ===================== -->
+  <section id="work">
+    <div class="sec-head">
+      <div class="num"><b>02</b><span class="mono"><span class="en">Selected work</span><span class="vi">Thành tích tiêu biểu</span></span></div>
+      <div>
+        <h2 class="h2 en">My work.</h2>
+        <h2 class="h2 vi">Thành tích.</h2>
+        <p class="lead en">Papers, writeups, talks or certifications — the evidence behind the claims.</p>
+        <p class="lead vi">Bài báo, writeup, bài nói hoặc chứng chỉ — bằng chứng cho năng lực.</p>
+      </div>
+    </div>
+    <div class="list">
+      <a class="row" href="#">
+        <div class="venue"><strong><span class="en">Conference</span><span class="vi">Hội nghị</span> <span>2026</span></strong><small class="en">Talk · Main track</small><small class="vi">Bài nói · Phiên chính</small></div>
+        <div class="info"><h3 class="en">Title of your paper, talk or major writeup goes here ↗</h3><h3 class="vi">Tên bài báo, bài nói hoặc writeup quan trọng ↗</h3><span>Co-author, Ha Nguyen, Co-author</span></div>
+      </a>
+      <a class="row" href="#">
+        <div class="venue"><strong>CTF <span>2025</span></strong><small class="en">Team placement · Finals</small><small class="vi">Thứ hạng đội · Chung kết</small></div>
+        <div class="info"><h3 class="en">Competition name — placement and the challenge you are proudest of ↗</h3><h3 class="vi">Tên cuộc thi — thứ hạng và thử thách bạn tự hào nhất ↗</h3><span>Team name</span></div>
+      </a>
+      <a class="row" href="#">
+        <div class="venue"><strong><span class="en">Cert</span><span class="vi">Chứng chỉ</span> <span>2025</span></strong><small class="en">Professional certification</small><small class="vi">Chứng chỉ chuyên môn</small></div>
+        <div class="info"><h3 class="en">Certification name and the skills it proves ↗</h3><h3 class="vi">Tên chứng chỉ và kỹ năng nó chứng minh ↗</h3><span>Issuing body</span></div>
+      </a>
+    </div>
+    <p style="margin-top:28px"><a href="#" style="font-weight:500"><span class="en">View all work ↗</span><span class="vi">Xem tất cả ↗</span></a></p>
+  </section>
+
+  <!-- ===================== 03 PROJECTS ===================== -->
+  <section id="projects" class="bordered">
+    <div class="sec-head">
+      <div class="num"><b>03</b><span class="mono"><span class="en">Projects &amp; products</span><span class="vi">Dự án &amp; sản phẩm</span></span></div>
+      <div>
+        <h2 class="h2 en">Building things <em>people can use.</em></h2>
+        <h2 class="h2 vi">Xây dựng thứ <em>mọi người dùng được.</em></h2>
+        <p class="lead en">The belief behind what you build, in one or two sentences.</p>
+        <p class="lead vi">Niềm tin đằng sau những gì bạn xây dựng, trong một hai câu.</p>
+      </div>
+    </div>
+    <div class="cards">
+      <article class="card">
+        <div class="shot placeholder"><span class="en">product screenshot</span><span class="vi">ảnh chụp sản phẩm</span></div>
+        <div class="body">
+          <span class="mono">01 · <span class="en">Project</span><span class="vi">Dự án</span></span>
+          <h3>Project One</h3>
+          <p class="en">What it is, who it helps, and the outcome it delivers — in two sentences.</p>
+          <p class="vi">Nó là gì, giúp ai, và mang lại kết quả gì — trong hai câu.</p>
+          <ol>
+            <li><b>01</b><span class="en"><strong>Problem</strong> — the pain point it addresses.</span><span class="vi"><strong>Vấn đề</strong> — nỗi đau nó giải quyết.</span></li>
+            <li><b>02</b><span class="en"><strong>Approach</strong> — how you solved it.</span><span class="vi"><strong>Cách làm</strong> — bạn giải quyết thế nào.</span></li>
+            <li><b>03</b><span class="en"><strong>Result</strong> — a concrete, measurable outcome.</span><span class="vi"><strong>Kết quả</strong> — con số cụ thể, đo được.</span></li>
+          </ol>
+        </div>
+      </article>
+      <article class="card">
+        <div class="shot placeholder"><span class="en">product screenshot</span><span class="vi">ảnh chụp sản phẩm</span></div>
+        <div class="body">
+          <span class="mono">02 · <span class="en">Project</span><span class="vi">Dự án</span></span>
+          <h3>Project Two</h3>
+          <p class="en">What it is, who it helps, and the outcome it delivers — in two sentences.</p>
+          <p class="vi">Nó là gì, giúp ai, và mang lại kết quả gì — trong hai câu.</p>
+          <ol>
+            <li><b>01</b><span class="en"><strong>Problem</strong> — the pain point it addresses.</span><span class="vi"><strong>Vấn đề</strong> — nỗi đau nó giải quyết.</span></li>
+            <li><b>02</b><span class="en"><strong>Approach</strong> — how you solved it.</span><span class="vi"><strong>Cách làm</strong> — bạn giải quyết thế nào.</span></li>
+            <li><b>03</b><span class="en"><strong>Result</strong> — a concrete, measurable outcome.</span><span class="vi"><strong>Kết quả</strong> — con số cụ thể, đo được.</span></li>
+          </ol>
+        </div>
+      </article>
+    </div>
+    <p class="partners en"><strong>For partners and teams</strong> — I'm open to conversations about collaboration and new opportunities. <a href="#contact">Start a conversation ↗</a></p>
+    <p class="partners vi"><strong>Dành cho đối tác và đội nhóm</strong> — tôi luôn sẵn sàng trao đổi về hợp tác và cơ hội mới. <a href="#contact">Bắt đầu trò chuyện ↗</a></p>
+  </section>
+
+  <!-- ===================== CONTACT ===================== -->
+  <section id="contact" class="bordered contact">
+    <div class="left">
+      <span class="mono"><span class="en">Let's build something meaningful</span><span class="vi">Cùng làm điều ý nghĩa</span></span>
+      <h2 class="en">Open to the right <em class="accent">conversation.</em></h2>
+      <h2 class="vi">Sẵn sàng cho <em class="accent">cuộc trò chuyện.</em></h2>
+      <p class="lead en">Who you want to hear from, and what you'd like to work on together.</p>
+      <p class="lead vi">Bạn muốn nghe từ ai, và muốn cùng làm điều gì.</p>
+    </div>
+    <div>
+      <dl>
+        <div><dt class="mono">Email</dt><dd><a href="mailto:you@example.com">you@example.com</a></dd></div>
+        <div><dt class="mono">LinkedIn</dt><dd><a href="#"><span class="en">Connect with me ↗</span><span class="vi">Kết nối với tôi ↗</span></a></dd></div>
+        <div><dt class="mono">GitHub</dt><dd><a href="#">github.com/you ↗</a></dd></div>
+        <div><dt class="mono"><span class="en">Based in</span><span class="vi">Nơi ở</span></dt><dd><span class="en">Hanoi, Vietnam</span><span class="vi">Hà Nội, Việt Nam</span></dd></div>
+      </dl>
+      <a class="btn" href="mailto:you@example.com"><span class="en">Start a conversation ↗</span><span class="vi">Bắt đầu trò chuyện ↗</span></a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="wrap">
+  <div class="bar">
+    <span><strong>Ha Nguyen</strong> · <span class="en">Security Researcher &amp; Builder</span><span class="vi">Nghiên cứu bảo mật &amp; Xây dựng sản phẩm</span></span>
+    <a href="#top"><span class="en">Back to top ↑</span><span class="vi">Lên đầu trang ↑</span></a>
+    <span>© 2026 Ha Nguyen</span>
+  </div>
+</footer>
+
+<script>
+  // Language switch — no need to edit
+  function setLang(l){
+    document.documentElement.lang = l;
+    localStorage.setItem('site-lang', l);
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === l));
+  }
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+  setLang(document.documentElement.lang);
+</script>
+</body>
+</html>
