@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playbook Get-WinEvent cho Sysmon</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f1419;--panel:#161d26;--panel2:#1c2531;--line:#2a3646;--text:#d7dee8;--muted:#8a99ad;--accent:#4fb3ff;--green:#5fd38d;--red:#ff6b6b;--yellow:#ffc857;--purple:#c49bff}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;font-family:"Be Vietnam Pro",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.65;font-size:15.5px}
+nav{position:fixed;top:0;left:0;bottom:0;width:250px;background:var(--panel);border-right:1px solid var(--line);padding:22px 16px;overflow-y:auto}
+nav h2{font-size:15px;margin:0 0 14px;color:var(--accent)}
+nav a{display:block;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:6px;font-size:14px}
+nav a:hover{background:var(--panel2);color:var(--text)}
+main{margin-left:250px;padding:36px 48px 80px;max-width:1050px}
+h1{font-size:30px;margin:0 0 6px}.sub{color:var(--muted);margin:0 0 28px}
+section{margin:0 0 46px;scroll-margin-top:20px}
+h2.sec{font-size:22px;border-bottom:1px solid var(--line);padding-bottom:8px;margin:0 0 16px}
+h2.sec span{color:var(--accent);font-family:"JetBrains Mono",monospace;margin-right:8px}
+h3{font-size:17px;margin:22px 0 8px;color:#fff}
+code{font-family:"JetBrains Mono",monospace;font-size:13px;background:var(--panel2);padding:1px 6px;border-radius:4px;color:var(--yellow)}
+.code{position:relative;margin:12px 0}
+pre{font-family:"JetBrains Mono",monospace;font-size:13px;background:#0a0e13;border:1px solid var(--line);border-radius:8px;padding:16px;overflow-x:auto;margin:0;line-height:1.55;white-space:pre}
+pre .k{color:var(--accent)}pre .p{color:var(--purple)}pre .s{color:var(--green)}pre .c{color:#6b7a8f;font-style:italic}
+.copy{position:absolute;top:8px;right:8px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:5px;font-size:12px;padding:3px 9px;cursor:pointer;font-family:inherit}
+.copy:hover{color:var(--text)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--panel2);color:var(--muted);font-weight:600}
+.box{border-radius:8px;padding:14px 18px;margin:14px 0;border-left:4px solid}
+.analogy{background:#14253a;border-color:var(--accent)}.warn{background:#2e1a1a;border-color:var(--red)}.tip{background:#16291f;border-color:var(--green)}
+.box b.lbl{display:block;margin-bottom:4px}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:14px 0}
+.flow div{background:var(--panel2);border:1px solid var(--line);padding:8px 12px;border-radius:6px;font-size:13.5px}.flow i{color:var(--muted);font-style:normal}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 20px;margin:16px 0}.card h3{margin-top:0}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:10px;background:#2a2340;color:var(--purple);margin-right:6px;font-family:"JetBrains Mono",monospace}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.grid3 .card{margin:0}.grid3 .card h3{font-size:15.5px}
+@media(max-width:860px){nav{position:static;width:auto;border-right:0;border-bottom:1px solid var(--line)}main{margin-left:0;padding:24px 18px}.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<nav>
+  <h2>Get-WinEvent Playbook</h2>
+  <a href="#tong-quan">1. Tổng quan</a>
+  <a href="#co-ban">2. Lệnh cơ bản</a>
+  <a href="#ba-cach-loc">3. Ba cách lọc</a>
+  <a href="#hashtable">4. FilterHashtable</a>
+  <a href="#xpath">5. FilterXPath</a>
+  <a href="#doc-truong">6. Đọc trường EventData</a>
+  <a href="#san-tim">7. Công thức săn tìm</a>
+  <a href="#wevtutil">8. wevtutil.exe</a>
+  <a href="#loi">9. Lỗi thường gặp</a>
+  <a href="#cheat">10. Cheat sheet</a>
+</nav>
+<main>
+<h1>Playbook Get-WinEvent cho Sysmon</h1>
+<p class="sub">Dựa trên Task 4 "Cutting out the Noise" của room TryHackMe Sysmon, mở rộng thêm cú pháp, cách đọc trường dữ liệu và công thức săn tìm theo kỹ thuật tấn công.</p>
+
+<section id="tong-quan">
+<h2 class="sec"><span>01</span>Tổng quan</h2>
+<p><code>Get-WinEvent</code> là cmdlet PowerShell để đọc Windows Event Log: log đang chạy trên máy, hoặc file <code>.evtx</code> đã xuất ra. Room TryHackMe nhấn mạnh: Event Viewer chỉ lọc tốt theo Event ID và keyword, còn lọc bằng XML trên giao diện thì <b>rườm rà và khó mở rộng</b>. Dòng lệnh cho bạn kiểm soát chi tiết hơn nhiều.</p>
+<div class="box analogy"><b class="lbl">🏭 Hình dung</b>
+Event Log là <b>kho hồ sơ khổng lồ</b> của nhà máy. Event Viewer là đi bộ vào kho lật từng thùng. <code>Get-WinEvent</code> là <b>gọi điện cho thủ kho</b>: "Tìm cho tôi các phiếu loại 3, ghi cổng 4444, trong ngày hôm qua". Bạn càng mô tả chính xác (lọc sớm), thủ kho càng mang về ít giấy và càng nhanh.</div>
+<div class="flow"><div>Nguồn: LogName / Path</div><i>→</i><div>Lọc: Hashtable / XPath / XML</div><i>→</i><div>Đối tượng sự kiện</div><i>→</i><div>Đọc trường: ToXml()</div><i>→</i><div>Sắp xếp, đếm, xuất</div></div>
+</section>
+
+<section id="co-ban">
+<h2 class="sec"><span>02</span>Lệnh cơ bản</h2>
+<table>
+<tr><th>Mục đích</th><th>Lệnh</th></tr>
+<tr><td>Liệt kê mọi log có trên máy</td><td><code>Get-WinEvent -ListLog *</code></td></tr>
+<tr><td>Tìm log Sysmon</td><td><code>Get-WinEvent -ListLog *sysmon*</code></td></tr>
+<tr><td>Xem provider và các Event ID của nó</td><td><code>(Get-WinEvent -ListProvider Microsoft-Windows-Sysmon).Events | Select Id, Description</code></td></tr>
+<tr><td>10 sự kiện mới nhất của log đang chạy</td><td><code>Get-WinEvent -LogName "Microsoft-Windows-Sysmon/Operational" -MaxEvents 10</code></td></tr>
+<tr><td>Đọc file .evtx</td><td><code>Get-WinEvent -Path C:\Logs\Hunting_Metasploit.evtx</code></td></tr>
+<tr><td>Đọc từ cũ đến mới</td><td>thêm <code>-Oldest</code></td></tr>
+<tr><td>Đếm số sự kiện</td><td><code>(Get-WinEvent -Path file.evtx).Count</code></td></tr>
+<tr><td>Xem đầy đủ một sự kiện</td><td><code>... -MaxEvents 1 | Format-List *</code></td></tr>
+</table>
+<div class="box tip"><b class="lbl">💡 Ghi nhớ</b>Kết quả mặc định trả về <b>mới nhất trước</b>. Với file .evtx, sự kiện "đầu tiên" theo thời gian thường là kết quả cuối cùng, hoặc dùng <code>-Oldest</code>. Đọc log Sysmon trực tiếp cần PowerShell chạy <b>Administrator</b>.</div>
+</section>
+
+<section id="ba-cach-loc">
+<h2 class="sec"><span>03</span>Ba cách lọc – chọn cách nào?</h2>
+<div class="grid3">
+<div class="card"><h3>-FilterHashtable</h3><p>Dễ đọc, dễ viết. Lọc theo LogName/Path, Id, Level, thời gian, và tên trường dữ liệu.</p><p><b>Dùng khi:</b> lọc thông thường, hằng ngày.</p></div>
+<div class="card"><h3>-FilterXPath</h3><p>Là cách room TryHackMe dùng. Lọc sâu vào EventData bằng biểu thức XPath.</p><p><b>Dùng khi:</b> cần kết hợp nhiều điều kiện trên trường dữ liệu.</p></div>
+<div class="card"><h3>Where-Object</h3><p>Lọc <b>sau</b> khi đã lấy sự kiện về. Chậm hơn nhưng hỗ trợ <code>-like</code>, <code>-match</code> (regex).</p><p><b>Dùng khi:</b> cần tìm chuỗi con, regex.</p></div>
+</div>
+<div class="box warn"><b class="lbl">⚠️ Nguyên tắc tốc độ</b>Lọc ở <b>nguồn</b> (Hashtable/XPath) trước, rồi mới <code>Where-Object</code> trên tập đã thu nhỏ. Dùng <code>Get-WinEvent | Where-Object</code> trên log hàng triệu dòng sẽ rất chậm.</div>
+</section>
+
+<section id="hashtable">
+<h2 class="sec"><span>04</span>-FilterHashtable</h2>
+<table>
+<tr><th>Khóa</th><th>Ý nghĩa</th><th>Ví dụ</th></tr>
+<tr><td><code>LogName</code></td><td>Tên log</td><td><code>'Microsoft-Windows-Sysmon/Operational'</code></td></tr>
+<tr><td><code>Path</code></td><td>Đường dẫn file .evtx</td><td><code>'C:\Logs\x.evtx'</code></td></tr>
+<tr><td><code>ProviderName</code></td><td>Nguồn ghi log</td><td><code>'Microsoft-Windows-Sysmon'</code></td></tr>
+<tr><td><code>Id</code></td><td>Event ID, một hoặc mảng</td><td><code>1</code> hoặc <code>1,3,10</code></td></tr>
+<tr><td><code>Level</code></td><td>1 Critical · 2 Error · 3 Warning · 4 Info</td><td><code>2</code></td></tr>
+<tr><td><code>StartTime</code> / <code>EndTime</code></td><td>Khung thời gian</td><td><code>(Get-Date).AddHours(-24)</code></td></tr>
+<tr><td><code>&lt;TênTrường&gt;</code></td><td>Lọc theo trường EventData</td><td><code>DestinationPort=4444</code></td></tr>
+</table>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="c"># Kết nối mạng (ID 3) trong 24 giờ qua</span>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{
+    LogName   = <span class="s">'Microsoft-Windows-Sysmon/Operational'</span>
+    Id        = 3
+    StartTime = (Get-Date).AddHours(-24)
+}
+
+<span class="c"># Đọc file .evtx: dùng Path thay cho LogName</span>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ Path=<span class="s">'C:\Logs\Filtering.evtx'</span>; Id=3 }
+
+<span class="c"># Lọc luôn theo trường dữ liệu</span>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ Path=<span class="s">'C:\Logs\Hunting_Metasploit.evtx'</span>; Id=3; DestinationPort=<span class="s">'4444'</span> }</pre></div>
+</section>
+
+<section id="xpath">
+<h2 class="sec"><span>05</span>-FilterXPath</h2>
+<h3>5.1 Hiểu cấu trúc XML của một sự kiện</h3>
+<p>XPath là "địa chỉ" để chỉ tới một ô dữ liệu trong XML. Mỗi sự kiện Sysmon trông như sau (xem ở tab <b>Details → XML View</b> của Event Viewer):</p>
+<div class="code"><pre>
+&lt;Event&gt;
+  &lt;System&gt;
+    &lt;EventID&gt;3&lt;/EventID&gt;                          <span class="c">← */System/EventID</span>
+    &lt;TimeCreated SystemTime="2021-01-05T02:21:32Z"/&gt;
+  &lt;/System&gt;
+  &lt;EventData&gt;
+    &lt;Data Name="UtcTime"&gt;2021-01-05 02:21:32.123&lt;/Data&gt;
+    &lt;Data Name="Image"&gt;C:\Users\...\payload.exe&lt;/Data&gt;
+    &lt;Data Name="DestinationPort"&gt;4444&lt;/Data&gt;   <span class="c">← Data[@Name="DestinationPort"]</span>
+  &lt;/EventData&gt;
+&lt;/Event&gt;</pre></div>
+
+<h3>5.2 Ba mẫu lọc cơ bản (từ room)</h3>
+<table>
+<tr><th>Lọc theo</th><th>Mẫu</th></tr>
+<tr><td>Event ID</td><td><code>*/System/EventID=&lt;ID&gt;</code></td></tr>
+<tr><td>Tên trường XML</td><td><code>*/EventData/Data[@Name="&lt;Tên&gt;"]</code></td></tr>
+<tr><td>Giá trị dữ liệu</td><td><code>*/EventData/Data=&lt;Giá trị&gt;</code></td></tr>
+</table>
+<p>Ví dụ trong room, tìm kết nối mạng ra port 4444:</p>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-Path</span> C:\Users\THM-Analyst\Desktop\Scenarios\Practice\Hunting_Metasploit.evtx `
+  <span class="p">-FilterXPath</span> <span class="s">'*/System/EventID=3 and */EventData/Data[@Name="DestinationPort"] and */EventData/Data=4444'</span></pre></div>
+
+<div class="box warn"><b class="lbl">⚠️ Điểm tinh tế</b>Mẫu trên nghĩa là "có trường DestinationPort" <b>và</b> "có <i>bất kỳ</i> trường nào bằng 4444". Nếu SourcePort là 4444 thì cũng khớp. Cách viết chặt hơn, gắn giá trị vào đúng trường:
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-Path</span> .\Hunting_Metasploit.evtx `
+  <span class="p">-FilterXPath</span> <span class="s">"*[System[EventID=3] and EventData[Data[@Name='DestinationPort']='4444']]"</span></pre></div></div>
+
+<h3>5.3 Mẫu XPath nâng cao</h3>
+<table>
+<tr><th>Mục đích</th><th>XPath</th></tr>
+<tr><td>Nhiều Event ID</td><td><code>*[System[(EventID=1 or EventID=3)]]</code></td></tr>
+<tr><td>Trường bằng giá trị</td><td><code>*[EventData[Data[@Name='Image']='C:\Windows\System32\cmd.exe']]</code></td></tr>
+<tr><td>Sau một mốc thời gian (UTC)</td><td><code>*[System[TimeCreated[@SystemTime&gt;='2021-01-05T00:00:00.000Z']]]</code></td></tr>
+<tr><td>Trong 1 giờ qua (ms)</td><td><code>*[System[TimeCreated[timediff(@SystemTime) &lt;= 3600000]]]</code></td></tr>
+<tr><td>Kết hợp</td><td><code>*[System[EventID=10] and EventData[Data[@Name='TargetImage']='C:\Windows\system32\lsass.exe']]</code></td></tr>
+</table>
+<div class="box warn"><b class="lbl">⚠️ Giới hạn</b>XPath của Windows Event Log chỉ là <b>tập con</b>: không có <code>contains()</code>, <code>starts-with()</code>. Muốn tìm chuỗi con thì lọc thô bằng XPath trước, sau đó dùng <code>Where-Object { $_.Message -like '*mimikatz*' }</code>.</div>
+<div class="box tip"><b class="lbl">💡 Mẹo trích dẫn</b>Bọc XPath bằng nháy đơn <code>'...'</code> ở ngoài và nháy kép <code>"..."</code> ở trong (hoặc ngược lại). Trộn lẫn sai là lỗi phổ biến nhất.</div>
+</section>
+
+<section id="doc-truong">
+<h2 class="sec"><span>06</span>Đọc trường EventData</h2>
+<p>Cột <code>Message</code> chỉ hiện tóm tắt. Muốn lấy đúng từng trường (UtcTime, Image, DestinationIp…) để sắp xếp, so sánh hay xuất CSV, hãy chuyển sự kiện sang XML.</p>
+<div class="box analogy"><b class="lbl">🏭 Hình dung</b>Một sự kiện giống <b>phiếu nhập kho</b>. <code>Message</code> là phần tóm tắt chép tay; <code>ToXml()</code> là <b>bản gốc có từng ô</b> ghi rõ "Tên ô: Giá trị".</div>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="c"># Biến mỗi sự kiện thành một object có đủ cột</span>
+<span class="k">function</span> ConvertTo-SysmonObject {
+  <span class="k">process</span> {
+    $x = [xml]$_.ToXml()
+    $o = [ordered]@{ EventId = $_.Id; TimeCreated = $_.TimeCreated }
+    <span class="k">foreach</span> ($d <span class="k">in</span> $x.Event.EventData.Data) { $o[$d.Name] = $d.<span class="s">'#text'</span> }
+    [pscustomobject]$o
+  }
+}
+
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ Path=<span class="s">'.\Filtering.evtx'</span>; Id=3 } -Oldest |
+  ConvertTo-SysmonObject |
+  Select-Object UtcTime, Image, SourceIp, DestinationIp, DestinationPort -First 5 |
+  Format-Table -AutoSize</pre></div>
+<table>
+<tr><th>Cần</th><th>Cách</th></tr>
+<tr><td>Xem nhanh một sự kiện đầy đủ</td><td><code>$e | Format-List *</code> hoặc <code>$e.Message</code></td></tr>
+<tr><td>Trường theo vị trí</td><td><code>$e.Properties[0].Value</code> (vị trí khác nhau theo từng Event ID, dễ nhầm)</td></tr>
+<tr><td>Trường theo tên (khuyên dùng)</td><td>Hàm <code>ConvertTo-SysmonObject</code> ở trên</td></tr>
+<tr><td>Thống kê</td><td><code>... | Group-Object DestinationIp | Sort Count -Desc</code></td></tr>
+<tr><td>Xuất CSV</td><td><code>... | Export-Csv out.csv -NoTypeInformation</code></td></tr>
+</table>
+<div class="box tip"><b class="lbl">💡 Về thời gian</b><code>TimeCreated</code> hiển thị theo <b>giờ máy local</b>. Trường <code>UtcTime</code> trong EventData mới là giờ UTC. Room hỏi "UTC time" thì đọc <code>UtcTime</code>, không đọc cột TimeCreated.</div>
+</section>
+
+<section id="san-tim">
+<h2 class="sec"><span>07</span>Công thức săn tìm theo kịch bản</h2>
+<p>Đặt sẵn biến cho gọn: <code>$log = 'Microsoft-Windows-Sysmon/Operational'</code> (hoặc dùng <code>-Path</code> với file .evtx).</p>
+
+<div class="card"><h3>A. Metasploit / reverse shell</h3><span class="tag">Event 3</span><span class="tag">T1571</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-LogName</span> $log <span class="p">-FilterXPath</span> <span class="s">"*[System[EventID=3] and EventData[Data[@Name='DestinationPort']='4444' or Data[@Name='DestinationPort']='5555']]"</span></pre></div></div>
+
+<div class="card"><h3>B. Mimikatz đọc bộ nhớ LSASS</h3><span class="tag">Event 10</span><span class="tag">T1003.001</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-LogName</span> $log <span class="p">-FilterXPath</span> <span class="s">"*[System[EventID=10] and EventData[Data[@Name='TargetImage']='C:\Windows\system32\lsass.exe']]"</span> |
+  ConvertTo-SysmonObject | Select UtcTime, SourceImage, GrantedAccess</pre></div>
+<p>Chú ý <code>SourceImage</code> lạ và <code>GrantedAccess</code> như <code>0x1010</code>, <code>0x1410</code>, <code>0x1FFFFF</code>.</p></div>
+
+<div class="card"><h3>C. Tìm file mimikatz được tạo ra</h3><span class="tag">Event 11</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=11 } |
+  <span class="k">Where-Object</span> { $_.Message <span class="p">-like</span> <span class="s">'*mimikatz*'</span> }</pre></div></div>
+
+<div class="card"><h3>D. Persistence qua Run key</h3><span class="tag">Event 13</span><span class="tag">T1547.001</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=13 } |
+  ConvertTo-SysmonObject |
+  <span class="k">Where-Object</span> { $_.TargetObject <span class="p">-match</span> <span class="s">'\\CurrentVersion\\Run'</span> } |
+  Select UtcTime, Image, TargetObject, Details</pre></div></div>
+
+<div class="card"><h3>E. Process injection (Remote Thread)</h3><span class="tag">Event 8</span><span class="tag">T1055</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=8 } |
+  ConvertTo-SysmonObject | Select UtcTime, SourceImage, TargetImage, StartFunction</pre></div></div>
+
+<div class="card"><h3>F. Giấu dữ liệu trong Alternate Data Stream</h3><span class="tag">Event 15</span><span class="tag">T1564.004</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=15 } |
+  ConvertTo-SysmonObject | Select UtcTime, Image, TargetFilename, Hash</pre></div></div>
+
+<div class="card"><h3>G. Lệnh PowerShell mã hóa</h3><span class="tag">Event 1</span><span class="tag">T1027</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=1 } |
+  ConvertTo-SysmonObject |
+  <span class="k">Where-Object</span> { $_.CommandLine <span class="p">-match</span> <span class="s">'\s-(e|enc|encodedcommand)\s'</span> } |
+  Select UtcTime, ParentImage, CommandLine</pre></div></div>
+
+<div class="card"><h3>H. Ai kết nối ra ngoài nhiều nhất?</h3><span class="tag">Event 3</span><span class="tag">Thống kê</span>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="k">Get-WinEvent</span> <span class="p">-FilterHashtable</span> @{ LogName=$log; Id=3 } |
+  ConvertTo-SysmonObject |
+  Group-Object Image, DestinationIp | Sort-Object Count -Descending | Select -First 10 Count, Name</pre></div></div>
+</section>
+
+<section id="wevtutil">
+<h2 class="sec"><span>08</span>wevtutil.exe – lựa chọn thay thế</h2>
+<p>Room nhắc <code>wevtutil.exe</code> như công cụ thứ hai. Nó dùng được cả trong <code>cmd.exe</code> và cùng cú pháp XPath.</p>
+<table>
+<tr><th>Mục đích</th><th>Lệnh</th></tr>
+<tr><td>5 sự kiện mới nhất, dạng chữ</td><td><code>wevtutil qe Microsoft-Windows-Sysmon/Operational /c:5 /rd:true /f:text</code></td></tr>
+<tr><td>Truy vấn file .evtx</td><td><code>wevtutil qe C:\Logs\x.evtx /lf:true /q:"*[System[EventID=3]]" /f:text</code></td></tr>
+<tr><td>Liệt kê log</td><td><code>wevtutil el</code></td></tr>
+<tr><td>Thông tin log (kích thước, số bản ghi)</td><td><code>wevtutil gli Microsoft-Windows-Sysmon/Operational</code></td></tr>
+<tr><td>Xuất log ra file</td><td><code>wevtutil epl Microsoft-Windows-Sysmon/Operational C:\Logs\sysmon.evtx</code></td></tr>
+</table>
+<p><code>/c</code> = số lượng · <code>/rd:true</code> = mới nhất trước · <code>/f:text|xml</code> = định dạng · <code>/lf:true</code> = đường dẫn là file.</p>
+</section>
+
+<section id="loi">
+<h2 class="sec"><span>09</span>Lỗi thường gặp</h2>
+<table>
+<tr><th>Thông báo / Triệu chứng</th><th>Nguyên nhân</th><th>Cách xử lý</th></tr>
+<tr><td><code>No events were found that match the specified selection criteria</code></td><td>Không có sự kiện khớp (đây không phải lỗi cú pháp)</td><td>Thêm <code>-ErrorAction SilentlyContinue</code> trong script; kiểm tra lại giá trị</td></tr>
+<tr><td><code>The specified query is invalid</code></td><td>XPath sai: thiếu ngoặc, lẫn nháy, dùng <code>contains()</code></td><td>Kiểm tra từng cặp <code>[ ]</code>, nháy trong/ngoài</td></tr>
+<tr><td><code>Attempted to perform an unauthorized operation</code></td><td>Không có quyền Admin</td><td>Mở PowerShell bằng Run as Administrator</td></tr>
+<tr><td>Trả về rỗng dù chắc có dữ liệu</td><td>Sai hoa thường trong <b>tên trường</b> (<code>@Name</code> phân biệt hoa thường) hoặc đường dẫn khác chữ</td><td>Xem XML View để chép đúng tên và giá trị</td></tr>
+<tr><td>Chạy rất chậm</td><td>Lọc bằng <code>Where-Object</code> trên toàn log</td><td>Lọc Id/thời gian bằng Hashtable trước</td></tr>
+<tr><td>Thời gian không khớp đáp án</td><td>Đọc <code>TimeCreated</code> (giờ local) thay vì <code>UtcTime</code></td><td>Dùng <code>ConvertTo-SysmonObject</code> để lấy <code>UtcTime</code></td></tr>
+</table>
+</section>
+
+<section id="cheat">
+<h2 class="sec"><span>10</span>Cheat sheet</h2>
+<div class="code"><button class="copy">Copy</button><pre>
+<span class="c"># ---- Nguồn ----</span>
+Get-WinEvent -ListLog *sysmon*
+Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -MaxEvents 20
+Get-WinEvent -Path .\file.evtx -Oldest
+
+<span class="c"># ---- Đếm ----</span>
+(Get-WinEvent -Path .\file.evtx -FilterXPath '*/System/EventID=3').Count
+
+<span class="c"># ---- Hashtable ----</span>
+Get-WinEvent -FilterHashtable @{Path='.\file.evtx'; Id=1,3; StartTime='2021-01-05'}
+
+<span class="c"># ---- XPath ----</span>
+Get-WinEvent -Path .\file.evtx -FilterXPath "*[System[EventID=3] and EventData[Data[@Name='DestinationPort']='4444']]"
+
+<span class="c"># ---- Chuỗi con / regex (lọc sau) ----</span>
+... | Where-Object { $_.Message -like '*mimikatz*' }
+
+<span class="c"># ---- Đọc trường ----</span>
+... | ConvertTo-SysmonObject | Select UtcTime, Image, DestinationIp
+
+<span class="c"># ---- Sự kiện đầu tiên theo thời gian ----</span>
+Get-WinEvent -Path .\file.evtx -FilterXPath '*/System/EventID=3' -Oldest -MaxEvents 1 | Format-List *</pre></div>
+<div class="box tip"><b class="lbl">📚 Học tiếp</b>Room TryHackMe <b>Windows Event Logs</b> (đi sâu Get-WinEvent, wevtutil, XPath) · Tài liệu Microsoft Learn về <code>Get-WinEvent</code> · Bộ truy vấn <b>Sigma</b> để chuyển ý tưởng săn tìm thành rule SIEM.</div>
+</section>
+</main>
+<script>
+document.querySelectorAll('.copy').forEach(function(b){
+  b.addEventListener('click',function(){
+    var t=b.parentElement.querySelector('pre').innerText.replace(/^\n/,'');
+    try{navigator.clipboard.writeText(t).then(function(){b.textContent='Đã copy';setTimeout(function(){b.textContent='Copy'},1500)},function(){b.textContent='Không copy được'});}
+    catch(e){b.textContent='Không copy được';}
+  });
+});
+</script>
+</body>
+</html>

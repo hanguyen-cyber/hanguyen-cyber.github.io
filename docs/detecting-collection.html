@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Detecting Collection – Blue Team Cheat Sheet</title>
+<style>
+  :root{--bg:#0f1419;--panel:#161d26;--panel2:#1c2531;--line:#2a3646;--text:#e6edf3;--muted:#8b98a8;
+    --accent:#4fd1c5;--thm:#c2f970;--s1:#f6c453;--s11:#5aa9ff;--net:#ff8a65;--ps:#c792ea;--sec:#7aa2f7}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:26px;margin:0 0 6px} h2{font-size:19px;margin:0 0 10px} h3{font-size:16px;margin:16px 0 6px}
+  .sub{color:var(--muted);margin:0 0 20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-bottom:18px}
+  .lead{border-left:4px solid var(--accent)}
+  .muted{color:var(--muted)}
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:12px}
+  .step{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+  .step b{display:block;color:var(--accent);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.two{grid-template-columns:1fr}}
+  .box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .box h3{margin-top:0}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#131a22}
+  code{font:13px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;background:#0b1015;border:1px solid var(--line);
+    padding:2px 6px;border-radius:5px;word-break:break-all;color:#e8f0f8}
+  pre{background:#0b1015;border:1px solid var(--line);border-radius:8px;padding:12px 14px;overflow:auto;position:relative;margin:8px 0}
+  pre code{border:none;padding:0;background:none}
+  .copy{position:absolute;top:8px;right:8px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);
+    color:var(--muted);border-radius:5px;font-size:11px;padding:2px 8px}
+  .copy:hover{color:var(--text);border-color:var(--accent)}
+  .ev{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:5px;color:#111;white-space:nowrap}
+  .e1{background:var(--s1)} .e11{background:var(--s11)} .enet{background:var(--net)} .eps{background:var(--ps)} .esec{background:var(--sec)}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;background:var(--thm);color:#111;vertical-align:middle}
+  .mitre{font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--accent);padding:0 7px;border-radius:6px;text-decoration:none;white-space:nowrap}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+  .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:5px 12px;border-radius:999px;font-size:13px}
+  .chip.on{border-color:var(--accent);background:#173a3a}
+  .lvl{font-weight:700;font-size:12px} .hi{color:#ff6b6b} .md{color:#f6c453} .lo{color:#8bd17c}
+  ol li,ul li{margin:4px 0}
+  details{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:8px 0}
+  summary{cursor:pointer;font-weight:600}
+  footer{margin-top:28px;color:var(--muted);font-size:12.5px} footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Detecting Collection: phát hiện kẻ tấn công đang “gom đồ”</h1>
+  <p class="sub">Tham chiếu: TryHackMe – Windows Threat Detection 2, Task 5 “Detecting Collection” · Góc nhìn Blue Team / SOC</p>
+
+  <div class="card lead">
+    <p><b>Hình dung:</b> Ở bước Discovery, kẻ trộm đi một vòng xem trong nhà có gì. Đến bước Collection, hắn bắt đầu <b>mở ngăn kéo, nhặt đồ bỏ vào túi rồi buộc túi lại</b> trước khi ra cửa. Người bảo vệ không cần đoán hắn lấy món gì. Chỉ cần thấy ba hành động là đủ báo động: <b>tay chạm vào két</b>, <b>túi đang được đóng gói</b>, và <b>có người xách túi ra cửa</b>.</p>
+    <div class="flow">
+      <div class="step"><b>① Tìm và mở</b>Lục tìm file theo đuôi hoặc từ khoá, mở file nhạy cảm</div>
+      <div class="step"><b>② Gom về một chỗ</b>Copy vào thư mục tạm (staging)</div>
+      <div class="step"><b>③ Đóng gói</b>Nén thành .zip / .7z</div>
+      <div class="step"><b>④ Mang ra ngoài</b>Kết nối mạng ra ngoài ngay sau khi nén (Exfiltration)</div>
+    </div>
+    <p class="muted" style="margin-top:12px">Mỗi bước để lại dấu vết ở một loại log khác nhau. Một bước riêng lẻ có thể là việc bình thường, còn <b>cả chuỗi diễn ra liên tiếp từ cùng một tiến trình</b> mới là tín hiệu mạnh.</p>
+  </div>
+
+  <div class="card">
+    <h2>Hai kiểu Collection, hai cách để lại dấu vết</h2>
+    <div class="two">
+      <div class="box">
+        <h3>👤 Người thật ngồi gõ lệnh (hands-on-keyboard)</h3>
+        <ul>
+          <li>Hay gặp khi tấn công mạng doanh nghiệp lớn: kẻ tấn công biết mình cần gì và có nhiều thời gian để tìm.</li>
+          <li>Dùng công cụ có sẵn như Notepad, WordPad, CMD, PowerShell, 7-Zip.</li>
+          <li><b>Dễ thấy:</b> mọi lệnh đều sinh tiến trình mới, ghi lại đầy đủ dòng lệnh trong Sysmon Event 1.</li>
+          <li>Ví dụ thực tế trong room (theo The DFIR Report): mở file DOCX/TXT bằng Notepad, WordPad rồi nén tất cả bằng 7-Zip.</li>
+        </ul>
+      </div>
+      <div class="box">
+        <h3>🤖 Data stealer (malware tự động)</h3>
+        <ul>
+          <li>Hay gặp ở máy cá nhân, không cần người điều khiển. Cả quá trình thường xong trong chưa tới một phút.</li>
+          <li>Thường tự đọc file bằng code của chính nó, <b>ít khi gọi CMD/PowerShell</b>.</li>
+          <li><b>Khó hơn:</b> không có dòng lệnh nào cho biết đã lấy file nào. Phải dựa vào file được tạo ra (Event 11), truy cập file (4663) và kết nối mạng (Event 3/22).</li>
+          <li>Ví dụ trong room: Gremlin stealer (theo Unit 42).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Dấu hiệu dòng lệnh cần theo dõi (Sysmon 1 / Security 4688)</h2>
+    <p class="muted">Các ví dụ có nhãn <span class="tag">THM</span> lấy từ bảng trong room. Cột cuối cho biết mức độ đáng ngờ khi thấy lệnh đó đứng một mình.</p>
+    <table>
+      <tr><th>Bước</th><th>Dòng lệnh quan sát được</th><th>Ý nghĩa</th><th>Mức</th></tr>
+      <tr><td>① Mở file</td><td><code>notepad.exe C:\Users\&lt;user&gt;\Desktop\finances-2025.csv</code><span class="tag">THM</span></td><td>Mở xem nội dung một file đáng chú ý. Bình thường nếu là người dùng, lạ nếu tiến trình cha là shell từ xa.</td><td class="lvl lo">Thấp</td></tr>
+      <tr><td>① Lọc từ khoá</td><td><code>type debug-logs.txt | findstr password &gt; C:\Temp\passwords.txt</code><span class="tag">THM</span></td><td>Tìm chữ “password” trong file rồi ghi kết quả ra thư mục tạm.</td><td class="lvl hi">Cao</td></tr>
+      <tr><td>① Tìm theo đuôi</td><td><code>Get-ChildItem C:\Users\&lt;user&gt; -Recurse -Filter *.pdf</code><span class="tag">THM</span></td><td>Quét đệ quy cả thư mục người dùng để tìm một loại file.</td><td class="lvl md">Trung bình</td></tr>
+      <tr><td>② Gom về chỗ tạm</td><td><code>copy C:\Users\&lt;user&gt;\AppData\Roaming\Signal C:\Temp\</code><span class="tag">THM</span></td><td>Copy dữ liệu ứng dụng chat ra thư mục tạm. Người dùng thường gần như không bao giờ làm việc này.</td><td class="lvl hi">Cao</td></tr>
+      <tr><td>③ Nén</td><td><code>Compress-Archive C:\Temp\ C:\Temp\stolen_data.zip</code><span class="tag">THM</span></td><td>Đóng gói dữ liệu đã gom, chuẩn bị mang ra ngoài.</td><td class="lvl md">Trung bình</td></tr>
+      <tr><td>③ Nén</td><td><code>7za.exe a -tzip C:\Temp\stolen_data.zip C:\Temp\*.*</code><span class="tag">THM</span></td><td>Như trên nhưng dùng 7-Zip có sẵn trên máy.</td><td class="lvl md">Trung bình</td></tr>
+      <tr><td>① Clipboard</td><td><code>Get-Clipboard</code></td><td>Đọc nội dung đang copy, nơi thường chứa mật khẩu hoặc địa chỉ ví. Chạy từ script nền là rất lạ.</td><td class="lvl hi">Cao</td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Bản đồ nguồn log: nhìn vào đâu cho từng bước</h2>
+    <div class="chips" id="chips">
+      <span class="chip on" data-k="all">Tất cả</span>
+      <span class="chip" data-k="1">① Tìm/mở</span>
+      <span class="chip" data-k="2">② Gom</span>
+      <span class="chip" data-k="3">③ Nén</span>
+      <span class="chip" data-k="4">④ Mang ra</span>
+    </div>
+    <table id="logmap">
+      <tr><th>Nguồn log</th><th>Bước</th><th>Trường cần đọc</th><th>Bắt được gì</th><th>MITRE</th></tr>
+      <tr data-k="1 2 3"><td><span class="ev e1">Sysmon 1</span><br><span class="muted">Process Create</span></td><td>①②③</td><td><code>Image</code>, <code>CommandLine</code>, <code>ParentImage</code>, <code>ProcessGuid</code></td><td>Mọi lệnh Notepad, findstr, Get-ChildItem, copy, Compress-Archive, 7za. Tiến trình cha cho biết ai đứng sau.</td><td><a class="mitre" href="https://attack.mitre.org/techniques/T1005/" target="_blank" rel="noopener">T1005</a></td></tr>
+      <tr data-k="1 2 3"><td><span class="ev esec">Security 4688</span><br><span class="muted">Process Creation</span></td><td>①②③</td><td><code>New Process Name</code>, <code>Process Command Line</code></td><td>Như Sysmon 1, nhưng chỉ có dòng lệnh khi đã bật audit command line.</td><td></td></tr>
+      <tr data-k="2 3"><td><span class="ev e11">Sysmon 11</span><br><span class="muted">File Create</span></td><td>②③</td><td><code>Image</code>, <code>TargetFilename</code></td><td>Thư mục staging mới, file kết quả (passwords.txt), file nén .zip/.7z. <b>Quan trọng nhất với data stealer</b> vì nó không để lại dòng lệnh.</td><td><a class="mitre" href="https://attack.mitre.org/techniques/T1074/001/" target="_blank" rel="noopener">T1074.001</a> <a class="mitre" href="https://attack.mitre.org/techniques/T1560/001/" target="_blank" rel="noopener">T1560.001</a></td></tr>
+      <tr data-k="1"><td><span class="ev esec">Security 4663</span><br><span class="muted">Object Access</span></td><td>①</td><td><code>Object Name</code>, <code>Process Name</code>, <code>Accesses</code></td><td>Tiến trình nào đã <b>đọc</b> file nhạy cảm. Chỉ có khi đã bật audit File System và đặt SACL lên thư mục cần giám sát.</td><td></td></tr>
+      <tr data-k="1 3"><td><span class="ev eps">PowerShell 4104</span><br><span class="muted">Script Block Logging</span></td><td>①③</td><td><code>ScriptBlockText</code></td><td>Toàn bộ nội dung script PowerShell, kể cả khi bị làm rối: Get-Clipboard, tìm kiếm đệ quy, Compress-Archive.</td><td><a class="mitre" href="https://attack.mitre.org/techniques/T1115/" target="_blank" rel="noopener">T1115</a></td></tr>
+      <tr data-k="4"><td><span class="ev enet">Sysmon 22</span><br><span class="muted">DNS Query</span></td><td>④</td><td><code>Image</code>, <code>QueryName</code></td><td>Domain mà tiến trình đáng ngờ phân giải ngay sau khi nén xong, chính là nơi dữ liệu được gửi tới.</td><td></td></tr>
+      <tr data-k="4"><td><span class="ev enet">Sysmon 3</span><br><span class="muted">Network Connection</span></td><td>④</td><td><code>Image</code>, <code>DestinationHostname</code>, <code>DestinationIp</code>, <code>DestinationPort</code></td><td>Kết nối ra ngoài, cho biết IP và port thực tế.</td><td></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Quy trình điều tra trong lab Task 5</h2>
+    <p class="muted">Áp dụng sau khi chạy mẫu <code>stealer.exe</code> trong thư mục Practice\Task 5. Các bước dưới đây chỉ chỉ chỗ cần nhìn, không ghi sẵn đáp án.</p>
+    <ol>
+      <li>Mở <b>Applications and Services Logs → Microsoft → Windows → Sysmon → Operational</b>, bấm <b>Filter Current Log</b> với Event IDs <code>1,11,22,3</code>.</li>
+      <li>Dùng <b>Find…</b> tìm <code>stealer.exe</code> và ghi lại <b>ProcessGuid</b> (hoặc ProcessId) của nó. Mọi thứ phía sau đều xoay quanh mã này.</li>
+      <li><b>Thư mục malware tạo ra:</b> xem các Event <span class="ev e11">11</span> có <code>Image</code> là stealer.exe, đọc <code>TargetFilename</code>. Phần thư mục chung của các file là chỗ staging.</li>
+      <li><b>Loại file malware tìm kiếm:</b> xem Event <span class="ev e1">1</span> có <code>ParentImage</code> là stealer.exe. Trong <code>CommandLine</code> của lệnh tìm kiếm sẽ có các tham số như <code>-Include</code> / <code>-Filter</code> kèm đuôi file.</li>
+      <li><b>Cmdlet đọc clipboard:</b> vẫn trong các Event 1 đó, tìm dòng lệnh PowerShell có chữ <code>Clipboard</code>.</li>
+      <li><b>Domain nhận dữ liệu:</b> lọc Event <span class="ev enet">22</span>, xem <code>QueryName</code> của các truy vấn có thời gian ngay sau khi file nén được tạo. Bỏ qua domain hệ thống của Microsoft/AWS.</li>
+    </ol>
+
+    <h3>Truy vấn PowerShell hỗ trợ</h3>
+<pre><button class="copy">copy</button><code># Mọi sự kiện Sysmon 1/11/22/3 liên quan đến một tiến trình (đổi tên ở dòng đầu)
+$name = 'stealer.exe'
+Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' |
+  Where-Object { $_.Id -in 1,11,22,3 } |
+  ForEach-Object {
+    $d = @{}; ([xml]$_.ToXml()).Event.EventData.Data | ForEach-Object { $d[$_.Name] = $_.'#text' }
+    if ($d.Image -like "*$name" -or $d.ParentImage -like "*$name") {
+      [pscustomobject]@{
+        Time   = $_.TimeCreated
+        Event  = $_.Id
+        Image  = Split-Path $d.Image -Leaf
+        Detail = $d.CommandLine + $d.TargetFilename + $d.QueryName + $d.DestinationHostname
+      }
+    }
+  } | Sort-Object Time | Format-Table -AutoSize -Wrap</code></pre>
+
+<pre><button class="copy">copy</button><code># File nén mới được tạo (Sysmon 11): dấu hiệu "buộc túi"
+Get-WinEvent -LogName 'Microsoft-Windows-Sysmon/Operational' -FilterXPath "*[System[EventID=11]]" |
+  Where-Object { $_.Message -match '\.(zip|7z|rar)\b' } |
+  Select-Object TimeCreated, @{n='Detail';e={($_.Message -split "`n" | Select-String 'Image|TargetFilename') -join ' | '}}</code></pre>
+  </div>
+
+  <div class="card">
+    <h2>Ý tưởng quy tắc phát hiện cho SIEM</h2>
+    <details open>
+      <summary>Quy tắc 1: chuỗi “gom → nén → gửi” trong thời gian ngắn</summary>
+      <p>Cùng một ProcessGuid (hoặc cây tiến trình): có Event 11 tạo file .zip/.7z, rồi trong vòng 5 phút có Event 3/22 ra domain chưa từng gặp. Độ tin cậy cao, hiếm khi báo nhầm.</p>
+    </details>
+    <details>
+      <summary>Quy tắc 2: tiến trình lạ đọc dữ liệu của ứng dụng khác</summary>
+      <p>Bật SACL trên thư mục profile của trình duyệt, ứng dụng chat, ví điện tử, thư mục <code>.ssh</code>. Cảnh báo khi Event 4663 cho thấy tiến trình <b>không phải</b> chính ứng dụng đó đọc file. Ví dụ: một exe trong Downloads đọc dữ liệu của Chrome.</p>
+    </details>
+    <details>
+      <summary>Quy tắc 3: tìm từ khoá nhạy cảm trong dòng lệnh</summary>
+      <p>Event 1/4688 có <code>findstr</code> hoặc <code>Select-String</code> đi kèm từ khoá như <code>password</code>, <code>pass</code>, <code>secret</code>, <code>key</code>, và có ghi kết quả ra file.</p>
+    </details>
+    <details>
+      <summary>Quy tắc 4: đọc clipboard từ tiến trình nền</summary>
+      <p>Event 4104 hoặc Event 1 có <code>Get-Clipboard</code>, với tiến trình cha không phải phiên PowerShell mà người dùng tự mở.</p>
+    </details>
+    <details>
+      <summary>Quy tắc 5: thư mục staging bất thường</summary>
+      <p>Event 11: một tiến trình tạo hàng loạt file trong <code>C:\Temp</code>, <code>%TEMP%</code>, <code>C:\ProgramData</code> hoặc <code>C:\PerfLogs</code> trong vòng vài giây.</p>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Checklist cấu hình log để không bị “mù”</h2>
+    <ul>
+      <li>☐ Đã cài Sysmon với cấu hình bật Event 1, 3, 11, 22 (ví dụ cấu hình SwiftOnSecurity hoặc olafhartong/sysmon-modular).</li>
+      <li>☐ Đã bật <b>Audit Process Creation</b> và <b>Include command line in process creation events</b> (4688).</li>
+      <li>☐ Đã bật <b>PowerShell Script Block Logging</b> (4104).</li>
+      <li>☐ Đã bật <b>Audit File System</b> và đặt SACL lên các thư mục dữ liệu nhạy cảm (4663).</li>
+      <li>☐ Log được đẩy về SIEM. Malware có thể xoá log trên máy, còn bản trên SIEM thì vẫn giữ lại.</li>
+    </ul>
+  </div>
+
+  <footer>
+    Tham chiếu: <a href="https://tryhackme.com/room/windowsthreatdetection2" target="_blank" rel="noopener">TryHackMe – Windows Threat Detection 2</a> (Task 5 “Detecting Collection”) ·
+    MITRE ATT&amp;CK <a href="https://attack.mitre.org/tactics/TA0009/" target="_blank" rel="noopener">Collection (TA0009)</a>.
+    Tài liệu học tập phục vụ phát hiện và phòng thủ.
+  </footer>
+</div>
+<script>
+document.querySelectorAll('.copy').forEach(b=>b.onclick=()=>{
+  const t=b.parentElement.querySelector('code').innerText;
+  navigator.clipboard?.writeText(t).then(()=>{b.textContent='✓';setTimeout(()=>b.textContent='copy',1200);}).catch(()=>{});
+});
+document.querySelectorAll('#chips .chip').forEach(c=>c.onclick=()=>{
+  document.querySelectorAll('#chips .chip').forEach(x=>x.classList.remove('on')); c.classList.add('on');
+  const k=c.dataset.k;
+  document.querySelectorAll('#logmap tr[data-k]').forEach(r=>{
+    r.style.display = (k==='all' || r.dataset.k.split(' ').includes(k)) ? '' : 'none';
+  });
+});
+</script>
+</body>
+</html>

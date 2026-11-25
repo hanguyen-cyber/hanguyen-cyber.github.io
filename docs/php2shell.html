@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHP2Shell — Walkthrough &amp; Teaching Guide</title>
+<style>
+  :root{
+    --bg:#0d1526; --panel:#131d33; --panel2:#182647; --line:#26365c;
+    --text:#e8eef9; --muted:#9fb0cc; --accent:#8bd450; --accent2:#4ea3ff;
+    --warn:#ffb13d; --danger:#ff6b6b; --good:#54d98c; --mono:#c4d2ec;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.65;font-size:16px}
+  .wrap{max-width:960px;margin:0 auto;padding:32px 20px 80px}
+  header.hero{text-align:center;padding:40px 20px 28px;border-bottom:1px solid var(--line);margin-bottom:8px}
+  header.hero h1{font-size:2.1rem;margin:0 0 8px;color:var(--accent)}
+  header.hero .sub{color:var(--muted);font-size:1.05rem;max-width:640px;margin:0 auto}
+  .badges{margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .badge{background:var(--panel2);border:1px solid var(--line);border-radius:999px;
+    padding:4px 14px;font-size:.82rem;color:var(--muted)}
+  .badge.crit{color:var(--danger);border-color:#5c2630}
+  h2{font-size:1.5rem;color:var(--accent2);margin:44px 0 6px;
+    padding-bottom:8px;border-bottom:1px solid var(--line)}
+  h2 .n{display:inline-block;width:34px;height:34px;line-height:34px;text-align:center;
+    background:var(--accent2);color:#06101f;border-radius:8px;font-size:1rem;margin-right:10px;font-weight:700}
+  h3{font-size:1.15rem;color:var(--text);margin:26px 0 6px}
+  p{margin:10px 0}
+  .muted{color:var(--muted)}
+  code{background:#0a1120;color:var(--mono);padding:2px 6px;border-radius:5px;
+    font-family:"SF Mono",Consolas,Monaco,monospace;font-size:.88em}
+  pre{background:#0a1120;border:1px solid var(--line);border-radius:10px;padding:14px 16px;
+    overflow-x:auto;font-family:"SF Mono",Consolas,Monaco,monospace;font-size:.85rem;color:var(--mono)}
+  pre .c{color:var(--muted)}
+  pre .g{color:var(--good)}
+  pre .o{color:var(--warn)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:16px 0}
+  .analogy{border-left:4px solid var(--accent);background:var(--panel2);border-radius:0 10px 10px 0;padding:12px 16px;margin:14px 0}
+  .analogy b{color:var(--accent)}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 22px;margin:22px 0}
+  .toc ol{margin:6px 0 0;padding-left:20px}
+  .toc a{color:var(--accent2);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.92rem}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--accent2)}
+  td code{white-space:nowrap}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:18px 0}
+  .step{flex:1;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;position:relative}
+  .step .st{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .step .sh{font-weight:700;color:var(--accent2);margin:3px 0}
+  .step .sd{font-size:.84rem;color:var(--muted)}
+  .arrow{align-self:center;color:var(--accent);font-size:1.3rem;font-weight:700}
+  .tag{display:inline-block;font-size:.72rem;padding:2px 8px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .tag.leak{background:#1e3350;color:var(--accent2)}
+  .tag.rce{background:#3a1f22;color:var(--danger)}
+  .glossary dt{color:var(--accent);font-weight:700;margin-top:12px}
+  .glossary dd{margin:2px 0 0;color:var(--muted)}
+  ul.clean{margin:8px 0;padding-left:20px}
+  ul.clean li{margin:6px 0}
+  .detect{border-left:4px solid var(--accent2)}
+  .fix{border-left:4px solid var(--good)}
+  .fix h3{color:var(--good)}
+  .key{background:#14241a;border:1px solid #2b5238;border-radius:10px;padding:12px 16px;margin:14px 0}
+  .key b{color:var(--good)}
+  .speak{background:var(--panel2);border:1px dashed var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;font-style:italic;color:var(--muted)}
+  .speak::before{content:attr(data-mic);font-style:normal;color:var(--accent2);font-weight:700}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:.85rem;text-align:center}
+  /* language toggle */
+  #langbar{position:fixed;top:14px;right:14px;z-index:50}
+  #langBtn{background:var(--accent2);color:#06101f;border:none;border-radius:999px;
+    padding:9px 18px;font-size:.9rem;font-weight:700;cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  #langBtn:hover{filter:brightness(1.08)}
+  .lang[hidden]{display:none}
+  @media print{body{background:#fff;color:#111}.card,.step,.analogy,.toc{break-inside:avoid}#langbar{display:none}}
+</style>
+</head>
+<body>
+
+<div id="langbar"><button id="langBtn" onclick="toggleLang()">Tiếng Việt</button></div>
+
+<!-- ================= ENGLISH ================= -->
+<div class="lang lang-en">
+<div class="wrap">
+
+<header class="hero">
+  <h1>PHP2Shell</h1>
+  <div class="sub">From a harmless feature to running commands on the server — the whole process explained for beginners, with how to detect and fix it.</div>
+  <div class="badges">
+    <span class="badge crit">CVE-2026-109618 · 9.2 Critical</span>
+    <span class="badge crit">CVE-2026-109619 · 9.2 Critical</span>
+    <span class="badge">Teaching material</span>
+  </div>
+</header>
+
+<div class="toc">
+  <b>Contents</b>
+  <ol>
+    <li><a href="#en-overview">Overview: what actually happens?</a></li>
+    <li><a href="#en-glossary">Glossary for beginners</a></li>
+    <li><a href="#en-chain">The attack, start to finish</a></li>
+    <li><a href="#en-detail">Step-by-step explanation</a></li>
+    <li><a href="#en-detect">How to detect it (defense)</a></li>
+    <li><a href="#en-fix">How to fix it</a></li>
+    <li><a href="#en-teach">Outline for teaching others</a></li>
+  </ol>
+</div>
+
+<h2 id="en-overview"><span class="n">1</span>Overview: what actually happens?</h2>
+<p><b>PHP</b> is a server-side language behind most of the world's websites. "PHP2Shell" is the name of a chain of flaws living inside <b>PHP itself</b> (the core runtime), <em>not</em> in the website or framework on top of it.</p>
+<p>The scary part: the attacker needs <b>no login and no special feature on the site</b>. Just a few ordinary HTTP requests to <em>any</em> PHP page that accepts POST — even a page that prints only the word <code>OK</code> — is enough to run commands on the server.</p>
+
+<div class="card">
+  <p style="margin:0"><b>Two flaws combine into one complete attack:</b></p>
+  <table>
+    <tr><th>CVE</th><th>Role</th><th>Result</th></tr>
+    <tr><td><code>CVE-2026-109618</code></td><td>Memory leak</td><td>Reads secret addresses → defeats the ASLR defense</td></tr>
+    <tr><td><code>CVE-2026-109619</code></td><td>Hijacks execution</td><td>Runs arbitrary commands (RCE) as the web-server user</td></tr>
+  </table>
+  <p class="muted" style="margin:6px 0 0">The bug has existed since PHP 5.4.0 (2012) — roughly 14 years of releases at once. Patched in PHP 8.5.12, 8.4.27, 8.3.36 and 8.2.35.</p>
+</div>
+
+<div class="key"><b>Core message to teach:</b> "Not logged in" does NOT mean "safe". Some PHP mechanisms run and write data <em>before</em> your application's first line of code.</div>
+
+<h2 id="en-glossary"><span class="n">2</span>Glossary for beginners</h2>
+<p class="muted">Read this first and the later sections become much easier.</p>
+<div class="card glossary">
+<dl>
+  <dt>Request / POST</dt>
+  <dd>Each time the browser talks to the server is a "request". <b>GET</b> = "show me", <b>POST</b> = "I'm submitting data" (posting, uploading a file). The submitted data is the <b>request body</b>.</dd>
+
+  <dt>Session &amp; PHPSESSID</dt>
+  <dd>A session is the "private notebook" the server keeps for each user. The server recognizes you by a random code sent in a cookie named <code>PHPSESSID</code>.</dd>
+
+  <dt>session.upload_progress</dt>
+  <dd>A PHP feature that reports "the upload is X% done". While receiving a file, PHP writes progress into the session. <b>Enabled by default.</b></dd>
+
+  <dt>Pointer &amp; Dangling pointer</dt>
+  <dd>A pointer is a "slip of paper holding the address" of some memory. If that memory is freed (returned) but the slip still points at it, you have a <b>dangling pointer</b> — pointing at a place no longer valid.</dd>
+
+  <dt>Use-after-free</dt>
+  <dd>The "using freed memory again" bug. If an attacker slips forged data into the exact memory just released, the program misreads it and acts on the fake data.</dd>
+
+  <dt>ASLR</dt>
+  <dd><i>Address Space Layout Randomization</i> — randomly shuffles where memory regions sit on each run, so the attacker can't guess the address to aim at.</dd>
+
+  <dt>Memory leak</dt>
+  <dd>Here it means being able to <b>read out</b> the process's memory, revealing the real addresses — the step needed to beat ASLR.</dd>
+
+  <dt>RCE</dt>
+  <dd><i>Remote Code Execution</i> — running arbitrary commands/code on the server from afar. The highest severity level.</dd>
+
+  <dt>www-data</dt>
+  <dd>The system account the web server (Apache/Nginx) runs as on Linux. The attacker's commands run with exactly this user's privileges.</dd>
+
+  <dt>Container / Docker</dt>
+  <dd>A "box" that packages an app plus its environment, running the same on any machine. In the lab the target server is built with Docker for safe practice.</dd>
+</dl>
+</div>
+
+<h2 id="en-chain"><span class="n">3</span>The attack, start to finish</h2>
+<p>Five links in a chain. Each link does one small thing; together they produce RCE.</p>
+
+<div class="flow">
+  <div class="step"><div class="st">Link 1</div><div class="sh">Harmless feature</div><div class="sd">upload_progress writes to the session before app code runs</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Link 2</div><div class="sh">The bug</div><div class="sd">A bailout at the wrong moment → dangling pointer (use-after-free)</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Link 3</div><div class="sh">Recon</div><div class="sd">Confirm the target is a vulnerable PHP</div></div>
+</div>
+<div class="flow">
+  <div class="step"><div class="st">Link 4</div><div class="sh">Memory leak <span class="tag leak">CVE-…618</span></div><div class="sd">Read heap &amp; PHP library addresses → defeat ASLR</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Link 5</div><div class="sh">Get a shell <span class="tag rce">CVE-…619</span></div><div class="sd">Trick the engine into calling system() → run commands as www-data</div></div>
+</div>
+
+<h2 id="en-detail"><span class="n">4</span>Step-by-step explanation</h2>
+
+<h3>Step 1 — A harmless feature: Upload Progress</h3>
+<p>When you upload a large file, PHP receives the data while writing progress (file name, size, bytes received) into <code>$_SESSION</code>, so another page can read it and report the percentage. This feature is <b>on by default</b> and is triggered when a form contains a field named <code>PHP_SESSION_UPLOAD_PROGRESS</code>.</p>
+<p>The key detail: this writing happens <b>while PHP is reading the submitted data</b>, i.e. <em>before</em> the page's code runs. The unintended consequence: an attacker can affect the server's memory <b>without logging in</b>, and any page that accepts POST is affected.</p>
+<div class="analogy"><b>Analogy:</b> Your code is the guard checking IDs at the door. But upload_progress is like a clerk standing <em>in front of</em> the door: the moment someone hands over a package, the clerk records their details — before the guard can ask for ID.</div>
+
+<h3>Step 2 — The bug: a bailout at the wrong moment</h3>
+<p>On an out-of-memory condition, PHP performs a "bailout" (emergency exit) to abort the request. In a special case, the <em>cleanup</em> step — clearing the pointer after freeing the memory — is <b>skipped</b>. Result: the memory is freed but the pointer still points at it → a <b>dangling pointer</b>.</p>
+<p class="analogy"><b>Analogy:</b> You check out of a hotel but never tear up the card that says "my room is 305". The next request on the same worker follows that old card into a room someone else (other data) now occupies.</p>
+<p class="muted">This is exactly <b>CWE-824</b>: the next request on the same worker follows a pointer that was never reset.</p>
+
+<h3>Step 3 — Recon: confirming the target</h3>
+<p>Before attacking, confirm the target really is a vulnerable PHP. In the lab this is confirmed by standing up a PHP container and checking its version:</p>
+<pre><span class="c"># Confirm the container is running and the PHP version</span>
+docker ps
+docker exec php2shell-target php -v   <span class="c"># → PHP 8.4.26</span>
+
+<span class="c"># The target page only prints "OK" — no special feature</span>
+curl -s http://127.0.0.1:8088/index.php   <span class="g"># OK</span></pre>
+<p>Meaning: it proves the flaw is <b>not in the application</b>. Even the most harmless page is attackable, because the bug lives in PHP's core.</p>
+
+<h3>Step 4 — Leak memory, defeat ASLR <span class="tag leak">CVE-2026-109618</span></h3>
+<p>ASLR stops the attacker from knowing where things sit in memory. This step <b>reads out memory</b> to reveal real addresses, thereby defeating ASLR. The leaked data is returned to the attacker through the <code>Set-Cookie</code> response header (normally used to issue <code>PHPSESSID</code>).</p>
+<p>The leak is run twice:</p>
+<ul class="clean">
+  <li><b>Pass 1:</b> reveals the base address of the <b>heap</b> (dynamic memory).</li>
+  <li><b>Pass 2:</b> reveals the base address of the <b>PHP library</b> (<code>libphp</code>) — where <code>system()</code> lives.</li>
+</ul>
+<div class="analogy"><b>Analogy:</b> Every morning the shop rearranges all its shelves (ASLR). A thief must first walk around to learn "which shelf is where today" (the leak) before acting. The two leak passes are those two scouting rounds.</div>
+
+<h3>Step 5 — From a leak to a shell <span class="tag rce">CVE-2026-109619</span></h3>
+<p>Knowing the real addresses, the attacker re-occupies the freed memory with a <b>forged</b> internal structure whose cleanup pointer (destructor) points to the address of <code>system()</code>. When the engine "cleans up" that value at the end of request handling, it believes it is calling a harmless destructor but actually <b>calls <code>system()</code> with an attacker-controlled string</b> — a command that runs on the server.</p>
+<p>The command runs as <code>www-data</code> (the web-server user). Proof in the lab: running <code>id</code> returns <code>uid=33(www-data)</code>.</p>
+<p class="muted">This document explains at a conceptual level for defense and teaching — it does not present detailed exploit code.</p>
+
+<h2 id="en-detect"><span class="n">5</span>How to detect it (defense)</h2>
+<div class="card detect">
+<h3>Signs in logs &amp; traffic</h3>
+<ul class="clean">
+  <li><b>Unusual upload_progress fields:</b> many POST requests carrying a <code>PHP_SESSION_UPLOAD_PROGRESS</code> field sent to endpoints with <em>no upload feature at all</em> — highly suspicious.</li>
+  <li><b>Odd <code>Set-Cookie</code> headers:</b> abnormally long <code>PHPSESSID</code> values or ones containing strange/binary bytes — possibly memory leaking out.</li>
+  <li><b>Workers crashing and restarting repeatedly:</b> many out-of-memory (OOM) errors or PHP segfaults in a short window — a sign memory is being hammered.</li>
+  <li><b>Fast, repeated POST bursts</b> to the same harmless page, with the cookie changing each time.</li>
+  <li><b>Strange commands running as <code>www-data</code>:</b> e.g. <code>id</code>, reading sensitive files, child processes spawned from Apache/PHP-FPM.</li>
+</ul>
+<h3>Helpful tools</h3>
+<ul class="clean">
+  <li><b>IDS/IPS (Snort, Suricata):</b> write a rule detecting a request body containing <code>PHP_SESSION_UPLOAD_PROGRESS</code> to unexpected endpoints, or oversized Set-Cookie responses.</li>
+  <li><b>WAF (ModSecurity):</b> block/log suspicious POST patterns.</li>
+  <li><b>Version monitoring:</b> inventory all servers for unpatched PHP (the most reliable detection).</li>
+  <li><b>EDR / process auditing:</b> alert when the web server spawns an unexpected shell.</li>
+</ul>
+</div>
+
+<h2 id="en-fix"><span class="n">6</span>How to fix it</h2>
+<div class="card fix">
+<h3>Priority #1 — Patch PHP</h3>
+<p>Upgrade to a patched build: <b>PHP 8.5.12, 8.4.27, 8.3.36 or 8.2.35</b> (or newer). This is the definitive fix; everything below is defense-in-depth.</p>
+
+<h3>Reduce the attack surface (if you can't patch immediately)</h3>
+<pre><span class="c">; in php.ini — turn the feature off if unused</span>
+session.upload_progress.enabled = <span class="o">Off</span>
+
+<span class="c">; tighten session handling</span>
+session.use_strict_mode = <span class="o">On</span></pre>
+<ul class="clean">
+  <li><b>Disable <code>session.upload_progress</code></b> when the app doesn't use an upload progress bar — closes the trigger path immediately.</li>
+  <li><b>Enable <code>session.use_strict_mode</code></b> so PHP won't accept session IDs the client invents.</li>
+  <li><b>Run PHP with least privilege:</b> limit what <code>www-data</code> can do (minimal write access, minimal system commands).</li>
+  <li><b>Defense in depth:</b> WAF, IDS, process monitoring — to block or spot it early even if one layer is bypassed.</li>
+  <li><b>Isolate with containers &amp; seccomp/AppArmor:</b> limit damage if the server is compromised.</li>
+</ul>
+</div>
+<div class="key"><b>General principle:</b> turn off default features you don't use, run services with least privilege, and keep patches current — these three habits block a whole class of flaws, not just PHP2Shell.</div>
+
+<h2 id="en-teach"><span class="n">7</span>Outline for teaching others</h2>
+<p class="muted">A suggested speaking order, with a few opening lines to lead with.</p>
+<div class="card">
+<p><b>① Open with the paradox</b></p>
+<div class="speak" data-mic="🎤 Say: ">"A web page that prints only the word OK, with no login box and no upload feature. And yet an attacker runs commands on the server. How?"</div>
+
+<p><b>② Point to the root: the bug is below the application</b></p>
+<div class="speak" data-mic="🎤 Say: ">"Because the flaw isn't in the website — it's in PHP's core, the layer beneath every framework. So even perfectly clean code is affected."</div>
+
+<p><b>③ Tell the 5-link chain</b> — use the diagram in Section 3. One line each: harmless feature → the bug → recon → leak defeats ASLR → get a shell.</p>
+
+<p><b>④ Use the analogies</b> (the clerk standing in front of the door; rearranging shelves every morning) so non-specialists follow.</p>
+
+<p><b>⑤ Close with defense</b> — the part that matters most to the audience:</p>
+<div class="speak" data-mic="🎤 Say: ">"Three things to do: patch PHP; disable upload_progress if unused; and monitor for anomalies like oversized Set-Cookie headers or workers crashing repeatedly."</div>
+
+<p><b>⑥ A memorable closing line</b></p>
+<div class="speak" data-mic="🎤 Say: ">"'Not logged in' doesn't mean 'safe'. Some mechanisms run before your very first line of code."</div>
+</div>
+
+<footer>
+  Teaching material — PHP2Shell (CVE-2026-109618 &amp; CVE-2026-109619). Conceptual content, for learning and defense.<br>
+  Based on the TryHackMe "PHP2Shell" lab. Always test only in environments you are authorized to use.
+</footer>
+
+</div>
+</div>
+
+<!-- ================= TIẾNG VIỆT ================= -->
+<div class="lang lang-vi" hidden>
+<div class="wrap">
+
+<header class="hero">
+  <h1>PHP2Shell</h1>
+  <div class="sub">Từ một tính năng vô hại đến chiếm quyền chạy lệnh trên máy chủ — giải thích trọn quy trình cho người mới, kèm cách nhận biết và khắc phục.</div>
+  <div class="badges">
+    <span class="badge crit">CVE-2026-109618 · 9.2 Critical</span>
+    <span class="badge crit">CVE-2026-109619 · 9.2 Critical</span>
+    <span class="badge">Tài liệu giảng dạy</span>
+  </div>
+</header>
+
+<div class="toc">
+  <b>Nội dung</b>
+  <ol>
+    <li><a href="#vi-overview">Tổng quan: chuyện gì xảy ra?</a></li>
+    <li><a href="#vi-glossary">Từ điển thuật ngữ cho người mới</a></li>
+    <li><a href="#vi-chain">Quy trình tấn công từ đầu đến cuối</a></li>
+    <li><a href="#vi-detail">Giải thích từng bước</a></li>
+    <li><a href="#vi-detect">Cách nhận biết (phòng thủ)</a></li>
+    <li><a href="#vi-fix">Cách khắc phục</a></li>
+    <li><a href="#vi-teach">Dàn ý giảng cho mọi người</a></li>
+  </ol>
+</div>
+
+<h2 id="vi-overview"><span class="n">1</span>Tổng quan: chuyện gì xảy ra?</h2>
+<p><b>PHP</b> là ngôn ngữ chạy phía máy chủ, đứng sau phần lớn website trên thế giới. "PHP2Shell" là tên một chuỗi lỗ hổng nằm ngay trong <b>bản thân PHP</b> (phần lõi runtime), <em>không</em> phải lỗi của website hay framework bên trên.</p>
+<p>Điểm đáng sợ: kẻ tấn công <b>không cần đăng nhập, không cần website có chức năng gì đặc biệt</b>. Chỉ cần gửi vài yêu cầu HTTP bình thường tới <em>bất kỳ</em> trang PHP nào nhận POST — kể cả một trang chỉ in đúng chữ <code>OK</code> — là có thể chạy được lệnh trên máy chủ.</p>
+
+<div class="card">
+  <p style="margin:0"><b>Hai lỗ hổng ghép lại thành một đòn hoàn chỉnh:</b></p>
+  <table>
+    <tr><th>CVE</th><th>Vai trò</th><th>Kết quả</th></tr>
+    <tr><td><code>CVE-2026-109618</code></td><td>Rò rỉ bộ nhớ (memory leak)</td><td>Đọc trộm địa chỉ bí mật → phá lớp bảo vệ ASLR</td></tr>
+    <tr><td><code>CVE-2026-109619</code></td><td>Chiếm luồng thực thi</td><td>Chạy lệnh tùy ý (RCE) dưới quyền web server</td></tr>
+  </table>
+  <p class="muted" style="margin:6px 0 0">Lỗi tồn tại từ PHP 5.4.0 (2012), tức ảnh hưởng ~14 năm phiên bản cùng lúc. Được vá trong PHP 8.5.12, 8.4.27, 8.3.36 và 8.2.35.</p>
+</div>
+
+<div class="key"><b>Thông điệp cốt lõi để giảng:</b> "Chưa qua đăng nhập" KHÔNG đồng nghĩa với "an toàn". Một số cơ chế của PHP chạy và ghi dữ liệu <em>trước cả</em> dòng code đầu tiên của ứng dụng.</div>
+
+<h2 id="vi-glossary"><span class="n">2</span>Từ điển thuật ngữ cho người mới</h2>
+<p class="muted">Đọc phần này trước, các mục sau sẽ dễ hiểu hơn nhiều.</p>
+<div class="card glossary">
+<dl>
+  <dt>Request / POST</dt>
+  <dd>Mỗi lần trình duyệt nói chuyện với máy chủ là một "yêu cầu" (request). <b>GET</b> = "cho tôi xem", <b>POST</b> = "tôi nộp dữ liệu cho anh" (đăng bài, upload file). Phần dữ liệu nộp lên gọi là <b>request body</b>.</dd>
+
+  <dt>Session &amp; PHPSESSID</dt>
+  <dd>Session là "cuốn sổ riêng" máy chủ giữ cho từng người dùng. Máy chủ nhận ra bạn qua một mã ngẫu nhiên gửi trong cookie tên <code>PHPSESSID</code>.</dd>
+
+  <dt>session.upload_progress</dt>
+  <dd>Tính năng của PHP để báo "upload đã lên bao nhiêu %". Khi đang nhận file, PHP vừa nhận vừa ghi tiến độ vào session. <b>Bật sẵn mặc định.</b></dd>
+
+  <dt>Con trỏ (pointer) &amp; Dangling pointer</dt>
+  <dd>Con trỏ là "tờ giấy ghi địa chỉ" của một vùng nhớ. Khi vùng nhớ đó đã được trả lại (giải phóng) mà tờ giấy vẫn còn trỏ tới đó, ta có <b>dangling pointer</b> (con trỏ bỏ lửng) — trỏ vào chỗ không còn hợp lệ.</dd>
+
+  <dt>Use-after-free</dt>
+  <dd>Lỗi "dùng lại vùng nhớ đã giải phóng". Nếu kẻ tấn công kịp nhét dữ liệu giả vào đúng vùng nhớ vừa được thả ra, chương trình sẽ hiểu nhầm và làm theo dữ liệu giả đó.</dd>
+
+  <dt>ASLR</dt>
+  <dd><i>Address Space Layout Randomization</i> — cơ chế xáo trộn vị trí các vùng nhớ ngẫu nhiên mỗi lần chạy, để kẻ tấn công không đoán được địa chỉ cần nhắm tới.</dd>
+
+  <dt>Memory leak (rò rỉ bộ nhớ)</dt>
+  <dd>Ở đây nghĩa là <b>đọc trộm</b> được nội dung bộ nhớ của tiến trình, từ đó biết các địa chỉ thật — bước cần thiết để vượt qua ASLR.</dd>
+
+  <dt>RCE</dt>
+  <dd><i>Remote Code Execution</i> — chạy được lệnh/mã tùy ý trên máy chủ từ xa. Đây là mức nghiêm trọng cao nhất.</dd>
+
+  <dt>www-data</dt>
+  <dd>Tài khoản hệ thống mà web server (Apache/Nginx) chạy dưới quyền đó trên Linux. Lệnh của kẻ tấn công chạy với đúng quyền này.</dd>
+
+  <dt>Container / Docker</dt>
+  <dd>"Chiếc hộp" đóng gói sẵn ứng dụng + môi trường, chạy độc lập và giống nhau trên mọi máy. Trong lab, máy chủ mục tiêu được dựng bằng Docker để thực hành an toàn.</dd>
+</dl>
+</div>
+
+<h2 id="vi-chain"><span class="n">3</span>Quy trình tấn công từ đầu đến cuối</h2>
+<p>Năm mắt xích nối tiếp. Mỗi mắt xích chỉ làm một việc nhỏ; ghép lại thành RCE.</p>
+
+<div class="flow">
+  <div class="step"><div class="st">Mắt xích 1</div><div class="sh">Tính năng vô hại</div><div class="sd">upload_progress ghi vào session trước khi code ứng dụng chạy</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Mắt xích 2</div><div class="sh">Cái bug</div><div class="sd">Bailout sai thời điểm → con trỏ bỏ lửng (use-after-free)</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Mắt xích 3</div><div class="sh">Trinh sát</div><div class="sd">Xác nhận mục tiêu là PHP có lỗ hổng</div></div>
+</div>
+<div class="flow">
+  <div class="step"><div class="st">Mắt xích 4</div><div class="sh">Rò rỉ bộ nhớ <span class="tag leak">CVE-…618</span></div><div class="sd">Đọc trộm địa chỉ heap &amp; thư viện PHP → phá ASLR</div></div>
+  <div class="arrow">→</div>
+  <div class="step"><div class="st">Mắt xích 5</div><div class="sh">Chiếm shell <span class="tag rce">CVE-…619</span></div><div class="sd">Lừa engine gọi system() → chạy lệnh dưới quyền www-data</div></div>
+</div>
+
+<h2 id="vi-detail"><span class="n">4</span>Giải thích từng bước</h2>
+
+<h3>Bước 1 — Một tính năng vô hại: Upload Progress</h3>
+<p>Khi bạn upload file lớn, PHP vừa nhận dữ liệu vừa ghi tiến độ (tên file, dung lượng, số byte đã nhận) vào <code>$_SESSION</code>, để trang khác đọc và báo % cho trình duyệt. Tính năng này <b>bật sẵn</b> và được kích hoạt khi form có một trường tên <code>PHP_SESSION_UPLOAD_PROGRESS</code>.</p>
+<p>Chi tiết then chốt: việc ghi này xảy ra <b>ngay trong lúc PHP đọc dữ liệu gửi lên</b>, tức <em>trước cả</em> khi code của trang chạy. Hệ quả ngoài ý muốn: kẻ tấn công tác động được vào bộ nhớ máy chủ mà <b>không cần đăng nhập</b>, và bất kỳ trang nào nhận POST cũng dính.</p>
+<div class="analogy"><b>Ví dụ:</b> Code của bạn là người bảo vệ kiểm tra giấy tờ ở cửa. Nhưng upload_progress như một nhân viên ghi sổ đứng <em>trước</em> cửa: ai đưa gói hàng là họ ghi thông tin vào sổ ngay, trước khi bảo vệ kịp hỏi giấy tờ.</div>
+
+<h3>Bước 2 — Cái bug: "bailout" sai thời điểm</h3>
+<p>Khi gặp tình huống hết bộ nhớ, PHP thực hiện một cú "bailout" (thoát khẩn cấp) để hủy yêu cầu. Trong tình huống đặc biệt, bước <em>dọn dẹp</em> — xóa con trỏ sau khi giải phóng vùng nhớ — bị <b>bỏ qua</b>. Kết quả: vùng nhớ đã được thả ra nhưng con trỏ vẫn trỏ tới đó → <b>dangling pointer</b>.</p>
+<p class="analogy"><b>Ví dụ:</b> Trả phòng khách sạn nhưng chưa xé tấm thẻ chỉ dẫn "phòng của tôi là 305". Yêu cầu kế tiếp trên cùng worker sẽ đi theo tấm thẻ cũ đó tới một căn phòng đã có người khác (dữ liệu khác) ở.</p>
+<p class="muted">Đây đúng là tình huống <b>CWE-824</b>: yêu cầu kế tiếp trên cùng một worker đi theo một con trỏ chưa bao giờ được reset.</p>
+
+<h3>Bước 3 — Trinh sát: xác nhận mục tiêu</h3>
+<p>Trước khi đánh, kiểm tra mục tiêu đúng là PHP dính lỗi. Trong lab, điều này được xác nhận bằng cách dựng một container PHP và kiểm tra phiên bản:</p>
+<pre><span class="c"># Xác nhận container đang chạy và đúng phiên bản PHP</span>
+docker ps
+docker exec php2shell-target php -v   <span class="c"># → PHP 8.4.26</span>
+
+<span class="c"># Trang mục tiêu chỉ in "OK" — không có chức năng gì đặc biệt</span>
+curl -s http://127.0.0.1:8088/index.php   <span class="g"># OK</span></pre>
+<p>Ý nghĩa: chứng minh lỗ hổng <b>không nằm ở ứng dụng</b>. Trang vô hại nhất cũng tấn công được, vì lỗi nằm trong lõi PHP.</p>
+
+<h3>Bước 4 — Rò rỉ bộ nhớ, phá ASLR <span class="tag leak">CVE-2026-109618</span></h3>
+<p>ASLR khiến kẻ tấn công không biết các thành phần nằm ở địa chỉ nào. Bước này <b>đọc trộm bộ nhớ</b> để lộ ra địa chỉ thật, qua đó vô hiệu hóa ASLR. Dữ liệu bị rò rỉ được máy chủ trả về cho kẻ tấn công thông qua header phản hồi <code>Set-Cookie</code> (vốn dùng để cấp <code>PHPSESSID</code>).</p>
+<p>Đoạn rò rỉ được chạy hai lần:</p>
+<ul class="clean">
+  <li><b>Lần 1:</b> lộ địa chỉ nền của vùng <b>heap</b> (bộ nhớ động).</li>
+  <li><b>Lần 2:</b> lộ địa chỉ nền của <b>thư viện PHP</b> (<code>libphp</code>) — nơi chứa hàm <code>system()</code>.</li>
+</ul>
+<div class="analogy"><b>Ví dụ:</b> Mỗi sáng cửa hàng đổi chỗ mọi kệ hàng (ASLR). Kẻ trộm phải đi một vòng dò xem "hôm nay kệ nào ở đâu" (leak) rồi mới ra tay. Hai lần leak chính là hai vòng dò đó.</div>
+
+<h3>Bước 5 — Từ leak đến shell <span class="tag rce">CVE-2026-109619</span></h3>
+<p>Biết được địa chỉ thật rồi, kẻ tấn công chiếm lại vùng nhớ đã bị thả bằng một cấu trúc nội bộ <b>giả</b>, trong đó con trỏ dọn dẹp (destructor) được trỏ tới địa chỉ của <code>system()</code>. Khi engine "dọn dẹp" giá trị đó lúc kết thúc xử lý yêu cầu, nó tưởng đang gọi một hàm hủy vô hại nhưng thực ra <b>gọi <code>system()</code> với chuỗi do kẻ tấn công kiểm soát</b> — tức một lệnh chạy trên máy chủ.</p>
+<p>Lệnh chạy dưới quyền <code>www-data</code> (user của web server). Bằng chứng trong lab: chạy <code>id</code> trả về <code>uid=33(www-data)</code>.</p>
+<p class="muted">Tài liệu này giải thích ở mức khái niệm để phục vụ phòng thủ và giảng dạy — không trình bày mã khai thác chi tiết.</p>
+
+<h2 id="vi-detect"><span class="n">5</span>Cách nhận biết (phòng thủ)</h2>
+<div class="card detect">
+<h3>Dấu hiệu trên log &amp; mạng</h3>
+<ul class="clean">
+  <li><b>Trường upload_progress bất thường:</b> nhiều request POST chứa trường <code>PHP_SESSION_UPLOAD_PROGRESS</code> gửi tới các endpoint <em>không hề có chức năng upload</em> — rất đáng ngờ.</li>
+  <li><b>Header <code>Set-Cookie</code> khác thường:</b> giá trị <code>PHPSESSID</code> dài bất thường hoặc chứa byte lạ/nhị phân — có thể là bộ nhớ bị rò rỉ ra ngoài.</li>
+  <li><b>Worker sập &amp; khởi động lại liên tục:</b> nhiều lỗi hết bộ nhớ (OOM) hoặc segfault của tiến trình PHP trong thời gian ngắn — dấu hiệu đang bị "dập" bộ nhớ.</li>
+  <li><b>Chuỗi request POST lặp nhanh</b> tới cùng một trang vô hại, kèm cookie thay đổi mỗi lần.</li>
+  <li><b>Lệnh lạ chạy dưới quyền <code>www-data</code>:</b> ví dụ <code>id</code>, <code>cat</code> file nhạy cảm, tiến trình con sinh ra từ Apache/PHP-FPM.</li>
+</ul>
+<h3>Công cụ hỗ trợ</h3>
+<ul class="clean">
+  <li><b>IDS/IPS (Snort, Suricata):</b> viết rule phát hiện request body chứa <code>PHP_SESSION_UPLOAD_PROGRESS</code> tới endpoint không mong đợi, hoặc Set-Cookie phản hồi quá khổ.</li>
+  <li><b>WAF (ModSecurity):</b> chặn/log các mẫu POST đáng ngờ.</li>
+  <li><b>Giám sát phiên bản:</b> rà soát toàn bộ máy chủ xem có bản PHP chưa vá không (đây là cách phát hiện chắc chắn nhất).</li>
+  <li><b>EDR / audit tiến trình:</b> cảnh báo khi web server sinh tiến trình shell bất thường.</li>
+</ul>
+</div>
+
+<h2 id="vi-fix"><span class="n">6</span>Cách khắc phục</h2>
+<div class="card fix">
+<h3>Ưu tiên số 1 — Vá PHP</h3>
+<p>Nâng cấp lên bản đã vá: <b>PHP 8.5.12, 8.4.27, 8.3.36 hoặc 8.2.35</b> (hoặc mới hơn). Đây là biện pháp triệt để; mọi thứ bên dưới chỉ là lớp phòng thủ bổ sung.</p>
+
+<h3>Giảm bề mặt tấn công (nếu chưa vá được ngay)</h3>
+<pre><span class="c">; trong php.ini — tắt tính năng nếu không dùng</span>
+session.upload_progress.enabled = <span class="o">Off</span>
+
+<span class="c">; siết chặt cách xử lý session</span>
+session.use_strict_mode = <span class="o">On</span></pre>
+<ul class="clean">
+  <li><b>Tắt <code>session.upload_progress</code></b> khi ứng dụng không dùng thanh tiến độ upload — đóng ngay con đường kích hoạt.</li>
+  <li><b>Bật <code>session.use_strict_mode</code></b> để PHP không chấp nhận session ID do client tự bịa.</li>
+  <li><b>Chạy PHP với quyền tối thiểu:</b> giới hạn những gì <code>www-data</code> được phép làm (ít quyền ghi, ít lệnh hệ thống).</li>
+  <li><b>Phòng thủ nhiều lớp:</b> WAF, IDS, giám sát tiến trình — để chặn hoặc phát hiện sớm ngay cả khi một lớp bị vượt.</li>
+  <li><b>Cô lập bằng container &amp; seccomp/AppArmor:</b> hạn chế thiệt hại nếu máy chủ bị chiếm.</li>
+</ul>
+</div>
+<div class="key"><b>Nguyên tắc chung rút ra:</b> tắt tính năng mặc định không dùng đến, chạy dịch vụ với quyền tối thiểu, và luôn cập nhật bản vá — ba thói quen này chặn cả một lớp lỗ hổng chứ không riêng PHP2Shell.</div>
+
+<h2 id="vi-teach"><span class="n">7</span>Dàn ý giảng cho mọi người</h2>
+<p class="muted">Gợi ý trình tự nói, kèm vài câu mở để bạn dẫn dắt.</p>
+<div class="card">
+<p><b>① Mở đầu bằng nghịch lý</b></p>
+<div class="speak" data-mic="🎤 Nói: ">"Một trang web chỉ in đúng chữ OK, không có ô đăng nhập, không có chức năng upload. Vậy mà kẻ tấn công chạy được lệnh trên máy chủ. Tại sao?"</div>
+
+<p><b>② Chỉ ra gốc rễ: lỗi nằm dưới ứng dụng</b></p>
+<div class="speak" data-mic="🎤 Nói: ">"Vì lỗi không nằm ở website, mà nằm trong chính lõi PHP — tầng bên dưới mọi framework. Nên dù bạn code sạch đến mấy vẫn dính."</div>
+
+<p><b>③ Kể chuỗi 5 mắt xích</b> — dùng đúng sơ đồ ở Mục 3. Mỗi mắt xích chỉ một câu: tính năng vô hại → cái bug → trinh sát → rò rỉ phá ASLR → chiếm shell.</p>
+
+<p><b>④ Dùng phép ví von</b> (người ghi sổ đứng trước cửa; đổi chỗ kệ hàng mỗi sáng) để lớp không chuyên vẫn nắm được.</p>
+
+<p><b>⑤ Chốt bằng phòng thủ</b> — phần quan trọng nhất với người nghe:</p>
+<div class="speak" data-mic="🎤 Nói: ">"Ba việc cần làm: cập nhật bản vá PHP; tắt tính năng upload_progress nếu không dùng; và giám sát các dấu hiệu bất thường như Set-Cookie quá khổ hay worker sập liên tục."</div>
+
+<p><b>⑥ Câu kết đáng nhớ</b></p>
+<div class="speak" data-mic="🎤 Nói: ">"'Chưa đăng nhập' không có nghĩa là 'an toàn'. Có những cơ chế chạy trước cả dòng code đầu tiên của bạn."</div>
+</div>
+
+<footer>
+  Tài liệu giảng dạy — PHP2Shell (CVE-2026-109618 &amp; CVE-2026-109619). Nội dung ở mức khái niệm, phục vụ học tập và phòng thủ.<br>
+  Dựa trên phòng lab TryHackMe "PHP2Shell". Hãy luôn thử nghiệm trong môi trường được phép.
+</footer>
+
+</div>
+</div>
+
+<script>
+function toggleLang(){
+  var en=document.querySelector('.lang-en');
+  var vi=document.querySelector('.lang-vi');
+  var btn=document.getElementById('langBtn');
+  var showVi = en.hidden === false ? true : false; // currently EN → switch to VI
+  if(showVi){
+    en.hidden=true; vi.hidden=false;
+    document.documentElement.lang='vi';
+    btn.textContent='English';
+  } else {
+    en.hidden=false; vi.hidden=true;
+    document.documentElement.lang='en';
+    btn.textContent='Tiếng Việt';
+  }
+  window.scrollTo(0,0);
+}
+</script>
+</body>
+</html>

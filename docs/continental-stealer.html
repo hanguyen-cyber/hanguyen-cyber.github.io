@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phân tích Continental Stealer – Góc nhìn phòng thủ</title>
+<style>
+  :root{
+    --bg:#0f1420; --panel:#161d2d; --panel2:#1c2538; --line:#2a3550;
+    --text:#e6ebf5; --muted:#9aa6bf; --accent:#4fd1c5; --warn:#f6ad55;
+    --danger:#fc6d6d; --ok:#68d391; --blue:#63b3ed; --purple:#b794f4;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;line-height:1.65;font-size:16px}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 64px}
+  header.hero{background:linear-gradient(135deg,#1a2340 0%,#2b1830 100%);border:1px solid var(--line);
+    border-radius:16px;padding:32px;margin-bottom:28px}
+  .tag{display:inline-block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+    background:rgba(252,109,109,.15);color:var(--danger);border:1px solid rgba(252,109,109,.4);
+    padding:3px 10px;border-radius:999px;margin-right:6px}
+  .tag.blue{background:rgba(99,179,237,.12);color:var(--blue);border-color:rgba(99,179,237,.4)}
+  h1{font-size:32px;margin:14px 0 8px;line-height:1.25}
+  h2{font-size:23px;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  h2 .num{background:var(--accent);color:#0f1420;width:30px;height:30px;border-radius:8px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;flex:none}
+  h3{font-size:17px;margin:0 0 6px}
+  p{margin:0 0 12px}
+  .muted{color:var(--muted)}
+  section{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;margin-bottom:22px}
+  .grid{display:grid;gap:14px}
+  .g4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .kpi .v{font-size:24px;font-weight:700;color:var(--accent)}
+  .kpi .l{font-size:13px;color:var(--muted)}
+  .analogy{border-left:4px solid var(--warn);background:rgba(246,173,85,.08);
+    padding:14px 18px;border-radius:0 10px 10px 0;margin:14px 0}
+  .analogy b{color:var(--warn)}
+  .note{border-left:4px solid var(--blue);background:rgba(99,179,237,.08);
+    padding:12px 16px;border-radius:0 10px 10px 0;margin:14px 0;font-size:15px}
+  .icon{font-size:26px;line-height:1;margin-bottom:8px}
+  table{width:100%;border-collapse:collapse;font-size:14.5px}
+  th,td{padding:10px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{background:var(--panel2);color:var(--muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+  tr:hover td{background:rgba(255,255,255,.02)}
+  code,.mono{font-family:Consolas,"Courier New",monospace;font-size:13.5px}
+  code{background:#0b0f18;border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--accent)}
+  pre{background:#0b0f18;border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;
+    font-size:13px;line-height:1.55;color:#cfe3ff;margin:10px 0}
+  .pill{display:inline-block;font-size:12px;padding:2px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .src{background:rgba(104,211,145,.14);color:var(--ok)}
+  .inf{background:rgba(183,148,244,.14);color:var(--purple)}
+  .typ{background:rgba(246,173,85,.14);color:var(--warn)}
+  .sev-h{background:rgba(252,109,109,.15);color:var(--danger)}
+  .sev-m{background:rgba(246,173,85,.15);color:var(--warn)}
+  .chain{display:flex;flex-wrap:wrap;gap:0;align-items:stretch;margin-top:8px}
+  .step{flex:1 1 150px;background:var(--panel2);border:1px solid var(--line);padding:14px;position:relative;min-width:150px}
+  .step:first-child{border-radius:12px 0 0 12px}
+  .step:last-child{border-radius:0 12px 12px 0}
+  .step .n{font-size:12px;color:var(--accent);font-weight:700;letter-spacing:.06em}
+  .step .t{font-weight:700;margin:2px 0 4px}
+  .step .d{font-size:13.5px;color:var(--muted)}
+  .layers .card{border-left:5px solid var(--accent)}
+  .layers .card:nth-child(2){border-left-color:var(--blue)}
+  .layers .card:nth-child(3){border-left-color:var(--purple)}
+  .layers .card:nth-child(4){border-left-color:var(--warn)}
+  .layers .card:nth-child(5){border-left-color:var(--danger)}
+  .layers .card:nth-child(6){border-left-color:var(--ok)}
+  ul{margin:6px 0 10px;padding-left:22px}
+  li{margin:3px 0}
+  .toc a{color:var(--blue);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  .toc ol{columns:2;column-gap:30px;margin:0;padding-left:20px}
+  a{color:var(--blue)}
+  svg text{font-family:"Segoe UI",Roboto,Arial,sans-serif}
+  footer{color:var(--muted);font-size:13px;text-align:center;margin-top:30px}
+  @media (max-width:700px){.toc ol{columns:1}.step{border-radius:12px!important;margin-bottom:6px}h1{font-size:26px}}
+  @media print{
+    body{background:#fff;color:#111}
+    section,header.hero,.card,.step{background:#fff!important;border-color:#bbb!important}
+    .muted,.step .d,th{color:#444!important}
+    pre{background:#f4f4f4;color:#111}
+    code{background:#f4f4f4;color:#05645e}
+    section{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="tag">Infostealer</span><span class="tag">Malware-as-a-Service</span><span class="tag blue">Threat Intel – Phòng thủ</span>
+  <h1>Continental Stealer: "Cửa hàng cho thuê đồ nghề trộm dữ liệu"</h1>
+  <p class="muted">Bài phân tích từ góc nhìn phòng thủ (Blue Team / SOC), dựa trên báo cáo của Cyberint (Check Point) về Continental Stealer. Bài gồm: mô hình kinh doanh, chuỗi tấn công, ánh xạ MITRE ATT&amp;CK, cách phát hiện, phòng chống và áp dụng cho môi trường nhà máy SMT.</p>
+  <p class="muted" style="margin:0;font-size:14px">Người soạn: Claude cho Ha · Ngày soạn: 22/11/2026 · Dữ liệu gốc: báo cáo cuối năm 2023</p>
+</header>
+
+<section class="toc">
+  <h2><span class="num">≡</span>Mục lục</h2>
+  <ol>
+    <li><a href="#tldr">Tóm tắt nhanh</a></li>
+    <li><a href="#analogy">Hiểu bằng ví von</a></li>
+    <li><a href="#business">Mô hình kinh doanh MaaS</a></li>
+    <li><a href="#chain">Chuỗi tấn công</a></li>
+    <li><a href="#data">Dữ liệu bị đánh cắp</a></li>
+    <li><a href="#evasion">Kỹ thuật né tránh</a></li>
+    <li><a href="#mitre">Ánh xạ MITRE ATT&amp;CK</a></li>
+    <li><a href="#detect">Cách phát hiện</a></li>
+    <li><a href="#defend">Phòng chống theo lớp</a></li>
+    <li><a href="#ir">Khi đã bị nhiễm</a></li>
+    <li><a href="#smt">Áp dụng cho nhà máy SMT</a></li>
+    <li><a href="#context">Bối cảnh 2026 &amp; kết luận</a></li>
+  </ol>
+</section>
+
+<!-- 1 -->
+<section id="tldr">
+  <h2><span class="num">1</span>Tóm tắt nhanh</h2>
+  <div class="grid g4">
+    <div class="card kpi"><div class="v">04/10/2023</div><div class="l">Lần đầu xuất hiện trên dark web</div></div>
+    <div class="card kpi"><div class="v">$120 – $540</div><div class="l">Thuê 1 tháng → trọn đời</div></div>
+    <div class="card kpi"><div class="v">Win 7 → 11</div><div class="l">32/64-bit, x86-x64 và ARM</div></div>
+    <div class="card kpi"><div class="v" style="color:var(--danger)">Cao</div><div class="l">Mức rủi ro: dễ dùng nên có nhiều người dùng</div></div>
+  </div>
+  <p style="margin-top:16px">Continental Stealer là mã độc <b>đánh cắp thông tin</b>, được cho thuê theo kiểu thuê bao qua Telegram và diễn đàn dark web. Điểm nguy hiểm nhất không nằm ở kỹ thuật, mà ở chỗ nó <b>rất dễ dùng</b>: có giao diện web, có công cụ tạo mã độc (builder) và bot thông báo. Người không biết lập trình cũng có thể vận hành một chiến dịch đánh cắp dữ liệu.</p>
+  <div class="note">Các nhãn trong bài: <span class="pill src">Theo bài gốc</span> là thông tin Cyberint công bố · <span class="pill inf">Suy luận</span> là suy luận hợp lý từ mô tả tính năng · <span class="pill typ">Điển hình</span> là hành vi phổ biến của dòng infostealer nói chung mà bài gốc không nêu.</div>
+</section>
+
+<!-- 2 -->
+<section id="analogy">
+  <h2><span class="num">2</span>Hiểu bằng ví von</h2>
+  <div class="analogy"><b>Hình dung:</b> Trước đây, muốn trộm két sắt thì phải tự học phá khóa, tự chế dụng cụ. Bây giờ có một "cửa hàng" cho thuê trọn bộ: dụng cụ phá khóa (builder), bản đồ (panel), bộ đàm báo tin (bot Telegram), kèm hướng dẫn sử dụng và đường dây hỗ trợ khách hàng. Người thuê chỉ cần trả tiền tháng và đi "làm việc".</div>
+  <div class="grid g3">
+    <div class="card"><div class="icon">🧰</div><h3>Builder = máy dập chìa khóa</h3><p class="muted">Người thuê nhập địa chỉ máy chủ C2, tick vài ô tùy chọn, rồi nhận về một file mã độc "may đo" riêng.</p></div>
+    <div class="card"><div class="icon">📊</div><h3>Panel = sổ kho hàng</h3><p class="muted">Dashboard thống kê số máy nạn nhân, số mật khẩu, ví crypto, thẻ tín dụng đã lấy được và cho tải về.</p></div>
+    <div class="card"><div class="icon">📣</div><h3>Bot Telegram = chuông báo</h3><p class="muted">Mỗi khi có máy nạn nhân mới gửi dữ liệu về, kẻ tấn công nhận được thông báo ngay trên điện thoại.</p></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section id="business">
+  <h2><span class="num">3</span>Mô hình kinh doanh Malware-as-a-Service</h2>
+  <p>Hệ sinh thái infostealer là một <b>dây chuyền chuyên môn hóa</b>, giống dây chuyền SMT: mỗi trạm làm một việc và nối tiếp nhau.</p>
+  <svg viewBox="0 0 1000 250" width="100%" role="img" aria-label="Sơ đồ mô hình MaaS">
+    <defs>
+      <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#4fd1c5"/></marker>
+    </defs>
+    <g font-size="14" fill="#e6ebf5">
+      <rect x="10" y="30" width="170" height="80" rx="10" fill="#2b1830" stroke="#fc6d6d"/>
+      <text x="95" y="62" text-anchor="middle" font-weight="700">Nhà phát triển</text>
+      <text x="95" y="84" text-anchor="middle" font-size="12" fill="#9aa6bf">viết mã độc, vận hành panel</text>
+
+      <rect x="230" y="30" width="170" height="80" rx="10" fill="#1c2538" stroke="#2a3550"/>
+      <text x="315" y="62" text-anchor="middle" font-weight="700">Telegram / Forum</text>
+      <text x="315" y="84" text-anchor="middle" font-size="12" fill="#9aa6bf">quảng cáo, bán, hỗ trợ</text>
+
+      <rect x="450" y="30" width="170" height="80" rx="10" fill="#2b1830" stroke="#fc6d6d"/>
+      <text x="535" y="62" text-anchor="middle" font-weight="700">Người thuê</text>
+      <text x="535" y="84" text-anchor="middle" font-size="12" fill="#9aa6bf">build mã độc, phát tán</text>
+
+      <rect x="670" y="30" width="150" height="80" rx="10" fill="#1c2538" stroke="#f6ad55"/>
+      <text x="745" y="62" text-anchor="middle" font-weight="700">Nạn nhân</text>
+      <text x="745" y="84" text-anchor="middle" font-size="12" fill="#9aa6bf">chạy file độc</text>
+
+      <rect x="670" y="160" width="150" height="70" rx="10" fill="#1c2538" stroke="#63b3ed"/>
+      <text x="745" y="190" text-anchor="middle" font-weight="700">Máy chủ C2</text>
+      <text x="745" y="210" text-anchor="middle" font-size="12" fill="#9aa6bf">nhận "log" mã hóa</text>
+
+      <rect x="450" y="160" width="170" height="70" rx="10" fill="#1c2538" stroke="#63b3ed"/>
+      <text x="535" y="190" text-anchor="middle" font-weight="700">Panel + Bot</text>
+      <text x="535" y="210" text-anchor="middle" font-size="12" fill="#9aa6bf">giải mã, thống kê, báo tin</text>
+
+      <rect x="230" y="160" width="170" height="70" rx="10" fill="#2b1830" stroke="#b794f4"/>
+      <text x="315" y="190" text-anchor="middle" font-weight="700">Kiếm tiền</text>
+      <text x="315" y="210" text-anchor="middle" font-size="12" fill="#9aa6bf">bán log, chiếm tài khoản</text>
+
+      <rect x="10" y="160" width="170" height="70" rx="10" fill="#1c2538" stroke="#b794f4"/>
+      <text x="95" y="190" text-anchor="middle" font-weight="700">Tấn công tiếp</text>
+      <text x="95" y="210" text-anchor="middle" font-size="12" fill="#9aa6bf">access broker, ransomware</text>
+    </g>
+    <g stroke="#4fd1c5" stroke-width="2" fill="none" marker-end="url(#ar)">
+      <line x1="180" y1="70" x2="226" y2="70"/>
+      <line x1="400" y1="70" x2="446" y2="70"/>
+      <line x1="620" y1="70" x2="666" y2="70"/>
+      <line x1="745" y1="110" x2="745" y2="156"/>
+      <line x1="670" y1="195" x2="624" y2="195"/>
+      <line x1="450" y1="195" x2="404" y2="195"/>
+      <line x1="230" y1="195" x2="184" y2="195"/>
+    </g>
+  </svg>
+  <div class="grid g3" style="margin-top:10px">
+    <div class="card"><h3>💵 Bảng giá <span class="pill src">Theo bài gốc</span></h3>
+      <table><tr><td>1 tháng</td><td><b>$120</b></td></tr><tr><td>3 tháng</td><td><b>$330</b></td></tr><tr><td>Trọn đời</td><td><b>$540</b></td></tr></table></div>
+    <div class="card"><h3>🧭 Nguồn gốc <span class="pill src">Theo bài gốc</span></h3><p class="muted">Cyberint đánh giá tác giả có khả năng có gốc hoặc động cơ liên quan đến Nga. Căn cứ chính là tùy chọn "không chạy ở các nước SNG" trong builder.</p></div>
+    <div class="card"><h3>📦 Định dạng log <span class="pill src">Theo bài gốc</span></h3><p class="muted">Cấu trúc file log mẫu giống các dòng stealer nổi tiếng khác. Nhờ vậy log dễ bán lại trên chợ đen, vì người mua đã quen định dạng này.</p></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section id="chain">
+  <h2><span class="num">4</span>Chuỗi tấn công (từ lúc lây nhiễm đến lúc kiếm tiền)</h2>
+  <div class="chain">
+    <div class="step"><div class="n">BƯỚC 1</div><div class="t">Phát tán</div><div class="d">Phần mềm crack, quảng cáo độc hại, email phishing, file giả mạo. <span class="pill typ">Điển hình</span></div></div>
+    <div class="step"><div class="n">BƯỚC 2</div><div class="t">Thực thi</div><div class="d">Người dùng tự chạy file. Mã độc kiểm tra máy ảo và quốc gia, nếu không phù hợp thì dừng.</div></div>
+    <div class="step"><div class="n">BƯỚC 3</div><div class="t">Trinh sát</div><div class="d">Thu thập user, tên máy, IP, phần cứng, phần mềm đã cài.</div></div>
+    <div class="step"><div class="n">BƯỚC 4</div><div class="t">Vơ vét</div><div class="d">Lấy mật khẩu, cookie, ví crypto, dữ liệu ứng dụng chat/email, file.</div></div>
+    <div class="step"><div class="n">BƯỚC 5</div><div class="t">Gửi về C2</div><div class="d">Dữ liệu được mã hóa trên máy nạn nhân và chỉ giải mã ở máy chủ.</div></div>
+    <div class="step"><div class="n">BƯỚC 6</div><div class="t">Xóa dấu vết</div><div class="d">Tự hủy sau khi chạy, nên khó tìm lại file mẫu để phân tích.</div></div>
+  </div>
+  <div class="analogy"><b>Ví von:</b> Infostealer là kiểu <b>"trộm vặt nhanh gọn"</b> (smash-and-grab), không phải kiểu "ở lì trong nhà". Nó vào, vét sạch trong vài giây đến vài phút, rồi biến mất. Vì vậy nếu chỉ dựa vào việc quét file theo lịch thì thường phát hiện quá muộn. Cần giám sát <b>hành vi theo thời gian thực</b>.</div>
+</section>
+
+<!-- 5 -->
+<section id="data">
+  <h2><span class="num">5</span>Dữ liệu bị đánh cắp <span class="pill src">Theo bài gốc</span></h2>
+  <div class="grid g4">
+    <div class="card"><div class="icon">🖥️</div><h3>Thông tin hệ thống</h3><p class="muted">Username, tên máy, IP, độ phân giải màn hình, CPU/GPU, RAM, ổ đĩa, ứng dụng đã cài.</p></div>
+    <div class="card"><div class="icon">🌐</div><h3>Trình duyệt</h3><p class="muted">Mật khẩu đã lưu, cookie phiên đăng nhập, autofill và thẻ tín dụng đã lưu.</p></div>
+    <div class="card"><div class="icon">💬</div><h3>Chat &amp; Email</h3><p class="muted">Dữ liệu của một số ứng dụng nhắn tin và email client.</p></div>
+    <div class="card"><div class="icon">🪙</div><h3>Ví tiền mã hóa</h3><p class="muted">File ví và extension ví trên trình duyệt.</p></div>
+    <div class="card"><div class="icon">📁</div><h3>File grabber</h3><p class="muted">Gom các file theo phần mở rộng hoặc thư mục do kẻ tấn công cấu hình.</p></div>
+    <div class="card"><div class="icon">🍪</div><h3>Cookie Converter</h3><p class="muted">Công cụ trong panel chuyển cookie giữa định dạng Netscape và JSON, giúp đem cookie đi "mạo danh phiên" dễ hơn.</p></div>
+  </div>
+  <div class="note"><b>Vì sao cookie đáng sợ hơn mật khẩu?</b> Cookie phiên giống <b>vòng tay đã đóng dấu ở cổng sự kiện</b>: người cầm nó được vào thẳng, không phải xếp hàng kiểm tra vé (mật khẩu) hay soát giấy tờ (MFA) lại. Kẻ tấn công nạp cookie vào trình duyệt của mình là có thể <b>vượt qua MFA</b>, chừng nào phiên đó còn hiệu lực.</div>
+</section>
+
+<!-- 6 -->
+<section id="evasion">
+  <h2><span class="num">6</span>Kỹ thuật né tránh trong Builder <span class="pill src">Theo bài gốc</span></h2>
+  <div class="grid g2">
+    <div class="card"><h3>🧪 AntiVM</h3><p>Phát hiện máy ảo hoặc sandbox thì không chạy.</p><p class="muted"><b>Ví von:</b> Tên trộm thấy camera thì giả vờ là khách qua đường. Chuyên gia phân tích mã độc trong máy ảo sẽ không thấy hành vi xấu nào.</p></div>
+    <div class="card"><h3>💣 Self-destruct</h3><p>Tự xóa file sau khi chạy xong.</p><p class="muted"><b>Ví von:</b> Trộm xong thì đốt luôn dụng cụ. Đội điều tra khó có mẫu để phân tích và tạo chữ ký nhận diện.</p></div>
+    <div class="card"><h3>🔁 AntiRepeat</h3><p>Không chạy lại nhiều lần trên cùng một máy.</p><p class="muted"><b>Ví von:</b> Không quay lại hiện trường cũ. Hành vi chỉ xuất hiện một lần nên log ít, khó thấy quy luật. Cơ chế cụ thể có thể là file đánh dấu hoặc mutex. <span class="pill inf">Suy luận</span></p></div>
+    <div class="card"><h3>🗺️ Tùy chọn CIS</h3><p>Chọn có chạy ở các nước thuộc Cộng đồng các Quốc gia Độc lập (SNG) hay không.</p><p class="muted"><b>Ví von:</b> "Không trộm trong làng mình" để tránh bị cảnh sát địa phương truy bắt. Đây là dấu hiệu quen thuộc của nhóm tội phạm mạng nói tiếng Nga.</p></div>
+  </div>
+  <div class="note">Các tùy chọn khác <span class="pill src">Theo bài gốc</span>: đổi phần mở rộng của file đầu ra, chọn phiên bản .NET Framework. Từ đó suy ra mã độc viết trên nền .NET <span class="pill inf">Suy luận</span>, và các công cụ như dnSpy/ILSpy thường dịch ngược được nếu không bị làm rối mã.</div>
+</section>
+
+<!-- 7 -->
+<section id="mitre">
+  <h2><span class="num">7</span>Ánh xạ MITRE ATT&amp;CK</h2>
+  <p class="muted">Đây là bảng ánh xạ do người soạn tự lập từ mô tả tính năng. Báo cáo gốc không công bố bảng ATT&amp;CK hay IOC.</p>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>Chiến thuật</th><th>Kỹ thuật</th><th>ID</th><th>Biểu hiện ở Continental</th><th>Độ tin cậy</th></tr></thead>
+    <tbody>
+      <tr><td>Initial Access</td><td>Phishing / Drive-by</td><td class="mono">T1566 / T1189</td><td>Bài gốc không nêu cách phát tán</td><td><span class="pill typ">Điển hình</span></td></tr>
+      <tr><td>Execution</td><td>User Execution: Malicious File</td><td class="mono">T1204.002</td><td>Nạn nhân tự chạy file .NET</td><td><span class="pill typ">Điển hình</span></td></tr>
+      <tr><td>Defense Evasion</td><td>Virtualization/Sandbox Evasion</td><td class="mono">T1497.001</td><td>Tùy chọn AntiVM</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Defense Evasion</td><td>Indicator Removal: File Deletion</td><td class="mono">T1070.004</td><td>Self-destruct</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Discovery</td><td>System Language Discovery</td><td class="mono">T1614.001</td><td>Kiểm tra máy có thuộc nước SNG không</td><td><span class="pill inf">Suy luận</span></td></tr>
+      <tr><td>Discovery</td><td>System Information Discovery</td><td class="mono">T1082</td><td>CPU, GPU, RAM, ổ đĩa, màn hình, tên máy</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Discovery</td><td>Software Discovery</td><td class="mono">T1518</td><td>Danh sách ứng dụng đã cài</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Discovery</td><td>System Network Config Discovery</td><td class="mono">T1016</td><td>Địa chỉ IP</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Credential Access</td><td>Credentials from Web Browsers</td><td class="mono">T1555.003</td><td>Mật khẩu đã lưu trong trình duyệt</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Credential Access</td><td>Steal Web Session Cookie</td><td class="mono">T1539</td><td>Cookie + Cookie Converter</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Collection</td><td>Data from Local System</td><td class="mono">T1005</td><td>File grabber, ví crypto, dữ liệu ứng dụng</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+      <tr><td>Command &amp; Control</td><td>Application Layer Protocol</td><td class="mono">T1071</td><td>Kết nối tới C2 theo IP cấu hình trong builder</td><td><span class="pill inf">Suy luận</span></td></tr>
+      <tr><td>Command &amp; Control</td><td>Encrypted Channel</td><td class="mono">T1573</td><td>Dữ liệu được mã hóa đến tận máy chủ</td><td><span class="pill inf">Suy luận</span></td></tr>
+      <tr><td>Exfiltration</td><td>Exfiltration Over C2 Channel</td><td class="mono">T1041</td><td>Log gửi thẳng về C2</td><td><span class="pill src">Theo bài gốc</span></td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="detect">
+  <h2><span class="num">8</span>Cách phát hiện (góc nhìn SOC)</h2>
+  <p>Bài gốc không công bố IOC cụ thể (hash, IP, domain), và mỗi người thuê lại tự build ra file riêng. Vì vậy <b>chữ ký dựa trên hash gần như vô dụng</b>, phải săn theo <b>hành vi</b>.</p>
+  <div class="analogy"><b>Ví von:</b> Không thể nhận dạng tên trộm qua khuôn mặt vì mỗi lần nó đeo một mặt nạ khác. Nhưng có thể nhận ra <b>hành động</b>: người lạ mở tủ két lúc 3 giờ sáng rồi vác túi ra cửa sau.</div>
+
+  <div class="grid g2">
+    <div class="card">
+      <h3>🖥️ Trên Endpoint (EDR / Sysmon)</h3>
+      <ul>
+        <li>Một <b>tiến trình không phải trình duyệt</b> đọc các file <code>Login Data</code>, <code>Cookies</code>, <code>Local State</code> trong thư mục profile Chrome/Edge. <span class="pill sev-h">Ưu tiên cao</span></li>
+        <li>Tiến trình truy cập thư mục ví crypto trong <code>%APPDATA%</code> hoặc thư mục extension ví.</li>
+        <li>File thực thi .NET chạy từ <code>%TEMP%</code>, <code>Downloads</code>, <code>%APPDATA%</code>, rồi gần như ngay lập tức mở kết nối mạng ra ngoài.</li>
+        <li>Mẫu tự xóa phổ biến: <code>cmd.exe /c</code> kết hợp <code>timeout</code>/<code>choice</code>/<code>ping</code> rồi <code>del</code> chính file vừa chạy. <span class="pill typ">Điển hình</span></li>
+        <li>Truy vấn WMI phần cứng (ví dụ <code>Win32_VideoController</code>, <code>Win32_ComputerSystem</code>) ngay sau khi chạy, vừa để trinh sát vừa để kiểm tra máy ảo.</li>
+      </ul>
+      <p class="muted" style="font-size:14px">Sysmon hữu ích: Event ID 1 (tạo tiến trình), 3 (kết nối mạng), 11 (tạo file), 23/26 (xóa file). Sysmon không ghi lại thao tác <i>đọc</i> file. Muốn bắt việc đọc file cookie, cần EDR hoặc SACL auditing (Event 4663).</p>
+    </div>
+    <div class="card">
+      <h3>🌐 Trên mạng (IDS / Proxy / DNS)</h3>
+      <ul>
+        <li>Builder bắt người thuê nhập <b>IP của C2</b>, nên dễ có kết nối HTTP/HTTPS tới <b>IP trần, không qua tên miền</b>. Lưu lượng hợp lệ hiếm khi như vậy. <span class="pill sev-h">Ưu tiên cao</span></li>
+        <li>Một request POST lớn bất thường ngay sau khi tiến trình mới khởi chạy, tức là đợt gửi log.</li>
+        <li>Máy trạm gọi <code>api.telegram.org</code> từ tiến trình không phải Telegram. Đây là kênh exfil phổ biến của nhiều stealer khác. <span class="pill typ">Điển hình</span></li>
+        <li>Đăng nhập tài khoản doanh nghiệp từ IP hoặc quốc gia lạ, dùng cookie hợp lệ nhưng không qua bước MFA. Dấu hiệu này lộ ra ở phía SaaS/IdP.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top:18px">Ví dụ rule Snort (mức khởi điểm, cần tinh chỉnh)</h3>
+  <p class="muted">Bắt HTTP POST mà header Host là địa chỉ IP trần. Rule này chỉ bắt được C2 chạy HTTP không mã hóa và sẽ có báo động giả, nên dùng để <b>săn tìm</b> chứ không dùng để chặn.</p>
+<pre>alert tcp $HOME_NET any -&gt; $EXTERNAL_NET $HTTP_PORTS (
+    msg:"HUNT - HTTP POST toi Host la IP tran (nghi stealer exfil)";
+    flow:to_server,established;
+    content:"POST"; http_method;
+    pcre:"/^Host\x3a\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(\x3a\d+)?\r?$/Hm";
+    classtype:trojan-activity;
+    sid:1000501; rev:1;
+)</pre>
+  <p class="muted" style="font-size:14px">Cách đọc rule: <code>flow:to_server</code> nghĩa là chỉ xét chiều đi ra; <code>http_method</code> giới hạn ở phương thức POST; <code>pcre</code> với cờ <code>H</code> dò trong header HTTP xem Host có phải dạng <i>a.b.c.d</i> hay không. Nên whitelist các thiết bị nội bộ hay gọi IP trực tiếp, ví dụ máy cập nhật firmware của thiết bị SMT.</p>
+</section>
+
+<!-- 9 -->
+<section id="defend">
+  <h2><span class="num">9</span>Phòng chống theo lớp (mô hình "pho mát Thụy Sĩ")</h2>
+  <div class="analogy"><b>Ví von:</b> Mỗi lớp phòng thủ giống một lát pho mát có lỗ. Một lớp riêng lẻ không bao giờ hoàn hảo, nhưng xếp nhiều lớp chồng lên nhau thì lỗ của lớp này bị lớp kia che.</div>
+  <div class="grid g3 layers">
+    <div class="card"><h3>1. Con người</h3><ul><li>Không tải phần mềm crack hay "tool miễn phí" lạ</li><li>Cảnh giác quảng cáo tìm kiếm giả mạo</li><li>Đào tạo nhận diện phishing và kiểu lừa "ClickFix"</li></ul></div>
+    <div class="card"><h3>2. Kiểm soát ứng dụng</h3><ul><li>AppLocker hoặc WDAC: chặn chạy file từ <code>%TEMP%</code>, <code>Downloads</code></li><li>Người dùng không có quyền admin</li><li>Chặn file thực thi gửi kèm email</li></ul></div>
+    <div class="card"><h3>3. Endpoint</h3><ul><li>EDR có luật bảo vệ kho credential của trình duyệt</li><li>Bật ASR rules của Microsoft Defender</li><li>Vá và nâng cấp hệ điều hành (bỏ Windows 7)</li></ul></div>
+    <div class="card"><h3>4. Danh tính</h3><ul><li>MFA chống phishing (FIDO2/passkey)</li><li>Rút ngắn thời hạn phiên, bật Conditional Access theo thiết bị</li><li>Dùng trình quản lý mật khẩu, không lưu mật khẩu trong trình duyệt</li></ul></div>
+    <div class="card"><h3>5. Mạng</h3><ul><li>Lọc lưu lượng đi ra (egress), chặn kết nối tới IP trần</li><li>Lọc DNS, chặn domain mới đăng ký</li><li>Phân vùng mạng: văn phòng, OT, khách</li></ul></div>
+    <div class="card"><h3>6. Giám sát</h3><ul><li>Gửi Sysmon + EDR log về SIEM</li><li>Săn tìm theo các hành vi ở mục 8</li><li>Theo dõi dịch vụ cảnh báo lộ credential trên dark web</li></ul></div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="ir">
+  <h2><span class="num">10</span>Khi nghi đã bị nhiễm: làm gì trước?</h2>
+  <p>Nguyên tắc: <b>coi như mọi thứ trên máy đó đã bị lộ</b>. Mã độc có thể đã tự xóa, nhưng dữ liệu thì đã ra khỏi máy.</p>
+  <div style="overflow-x:auto">
+  <table>
+    <thead><tr><th>#</th><th>Hành động</th><th>Lý do</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Cô lập máy khỏi mạng (qua EDR hoặc rút cáp)</td><td>Ngăn gửi thêm dữ liệu và lây lan</td></tr>
+      <tr><td>2</td><td>Từ một <b>máy sạch khác</b>, đổi mật khẩu các tài khoản quan trọng</td><td>Đổi trên máy nhiễm thì mật khẩu mới cũng bị lấy</td></tr>
+      <tr><td>3</td><td><b>Thu hồi toàn bộ phiên đăng nhập</b> (sign out all sessions, revoke token)</td><td>Chỉ đổi mật khẩu thì cookie đã bị lấy vẫn có thể còn hiệu lực</td></tr>
+      <tr><td>4</td><td>Chuyển tài sản crypto sang ví mới, báo ngân hàng khóa thẻ đã lưu trong trình duyệt</td><td>Ví và thẻ nằm trong danh sách bị nhắm</td></tr>
+      <tr><td>5</td><td>Thu thập chứng cứ: log EDR/Sysmon, proxy, DNS, ảnh bộ nhớ (nếu kịp)</td><td>File mẫu có thể đã tự hủy, log là bằng chứng còn lại</td></tr>
+      <tr><td>6</td><td>Cài lại hệ điều hành sạch (reimage)</td><td>Không tin vào việc "đã quét sạch"</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- 11 -->
+<section id="smt">
+  <h2><span class="num">11</span>Áp dụng cho môi trường nhà máy SMT</h2>
+  <p>Continental hỗ trợ cả <b>Windows 7 32-bit</b>. Đây là chi tiết đáng chú ý với nhà máy, vì nhiều PC điều khiển máy SPI/AOI, PC review hoặc máy chủ phần mềm dây chuyền vẫn chạy hệ điều hành cũ, ít được vá.</p>
+  <div class="grid g2">
+    <div class="card"><h3>⚠️ Rủi ro thường gặp</h3><ul>
+      <li>PC trên line vừa chạy phần mềm thiết bị vừa được dùng lướt web, đọc email</li>
+      <li>Tài khoản dùng chung, mật khẩu lưu sẵn trong trình duyệt để truy cập web nội bộ (MES, dashboard)</li>
+      <li>Kỹ sư cắm USB hoặc laptop cá nhân vào để copy chương trình, recipe, log</li>
+      <li>Mạng OT và mạng văn phòng chung một dải, không có tường lửa ở giữa</li>
+      <li>Phần mềm hỗ trợ từ xa có thông tin đăng nhập lưu sẵn trên máy</li>
+    </ul></div>
+    <div class="card"><h3>✅ Khuyến nghị thực tế</h3><ul>
+      <li>Phân vùng mạng theo mô hình Purdue, PC line không có Internet trực tiếp</li>
+      <li>Allowlist ứng dụng trên PC line (chỉ chạy phần mềm thiết bị)</li>
+      <li>Tách riêng máy dùng email/web với máy điều khiển thiết bị</li>
+      <li>Kiểm soát USB, quét file ở trạm trung chuyển trước khi đưa vào line</li>
+      <li>Kế hoạch nâng cấp OS cho các PC cũ, phối hợp với nhà cung cấp thiết bị để giữ tương thích</li>
+    </ul></div>
+  </div>
+  <div class="analogy"><b>Ví von quen thuộc:</b> Giống quản lý <b>ESD</b> trên line. Không ai cho người lạ đi vào khu vực SMT mà không có dép và áo chống tĩnh điện. Tương tự, không nên cho file lạ "đi thẳng" vào PC của dây chuyền mà không qua trạm kiểm soát.</div>
+</section>
+
+<!-- 12 -->
+<section id="context">
+  <h2><span class="num">12</span>Bối cảnh 2026 và kết luận</h2>
+  <p>Tại thời điểm soạn bài (11/2026), người soạn <b>không tìm thấy báo cáo công khai mới</b> nào về Continental Stealer sau bài của Cyberint. Có thể nó không phát triển thêm, đã đổi tên, hoặc chỉ hoạt động nhỏ lẻ. Dù vậy, <b>mô hình</b> nó đại diện vẫn rất phổ biến. Năm 2026, Microsoft vẫn mô tả các stealer như StealC theo đúng kiểu này: kẻ tấn công thuê builder để tạo mẫu tùy biến, kèm web panel quản lý dữ liệu đánh cắp. Microsoft cũng ghi nhận ACR Stealer (liên quan đến việc đổi tên từ Amatera Stealer) phân phối theo mô hình MaaS.</p>
+  <div class="grid g3">
+    <div class="card"><h3>🎯 Bài học 1</h3><p class="muted">Rào cản kỹ thuật để phạm tội mạng ngày càng thấp. Số người tấn công tăng lên dù năng lực từng người không cao.</p></div>
+    <div class="card"><h3>🎯 Bài học 2</h3><p class="muted">Mỗi người thuê tự build file riêng nên IOC thay đổi liên tục. Phòng thủ phải dựa trên <b>hành vi</b> và <b>kiểm soát danh tính</b>.</p></div>
+    <div class="card"><h3>🎯 Bài học 3</h3><p class="muted">Cookie phiên là "chìa khóa vạn năng" mới. MFA chống phishing, thời hạn phiên ngắn và khả năng thu hồi phiên nhanh là bắt buộc.</p></div>
+  </div>
+  <div class="note"><b>Gợi ý luyện tập (pentest/SOC):</b> Trên TryHackMe hoặc LetsDefend có các bài về phân tích Sysmon, Snort và điều tra sự cố malware. Bạn có thể dựng lab Windows + Sysmon + Splunk/ELK, rồi dùng <b>Atomic Red Team</b> mô phỏng các kỹ thuật ở mục 7 (T1555.003, T1539, T1070.004) để tập viết luật phát hiện, không cần đến mã độc thật.</div>
+</section>
+
+<section>
+  <h2><span class="num">↗</span>Nguồn tham khảo</h2>
+  <ul>
+    <li><a href="https://cyberint.com/blog/research/the-new-infostealer-in-town-the-continental-stealer/">Cyberint – The New InfoStealer in Town: The Continental Stealer</a> (báo cáo gốc)</li>
+    <li><a href="https://microsoft.com/en-us/security/blog/2026/06/24/stealc-and-amadey-breaking-down-infostealers-and-the-cybercrime-services-that-deliver-them">Microsoft Security Blog (06/2026) – StealC and Amadey: breaking down infostealers</a></li>
+    <li><a href="https://microsoft.com/en-us/security/blog/2026/07/16/acr-stealer-two-observed-intrusion-chains-amid-increased-threat-activity">Microsoft Security Blog (07/2026) – ACR Stealer: two observed intrusion chains</a></li>
+    <li><a href="https://attack.mitre.org/">MITRE ATT&amp;CK Enterprise Matrix</a></li>
+  </ul>
+</section>
+
+<footer>Tài liệu phục vụ học tập và phòng thủ. Không chứa mã độc hay hướng dẫn tấn công.</footer>
+</div>
+</body>
+</html>

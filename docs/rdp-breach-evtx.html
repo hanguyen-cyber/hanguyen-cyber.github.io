@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhận biết RDP Breach trên .evtx | Windows Threat Detection</title>
+<style>
+  :root{
+    --bg:#0f1520; --panel:#1c2538; --panel2:#141c2b; --border:#2a3550;
+    --text:#d6deeb; --muted:#8a99b5; --green:#88cc14; --red:#ff5d5d;
+    --amber:#ffb347; --blue:#4fa3ff; --term:#0b0f16;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 "Segoe UI",Ubuntu,Roboto,sans-serif}
+  header{background:linear-gradient(135deg,#1c2538,#0f1520);border-bottom:1px solid var(--border);padding:36px 24px}
+  header .wrap{max-width:980px;margin:auto}
+  .tag{display:inline-block;background:var(--green);color:#111;font-weight:700;font-size:12px;padding:3px 10px;border-radius:4px;margin-right:6px}
+  .tag.gray{background:#2a3550;color:var(--muted)}
+  h1{margin:14px 0 6px;font-size:32px}
+  header p{color:var(--muted);margin:0}
+  main{max-width:980px;margin:28px auto;padding:0 18px 60px}
+  nav.toc{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:16px 22px;margin-bottom:26px}
+  nav.toc b{color:var(--green)}
+  nav.toc ol{margin:8px 0 0;padding-left:22px}
+  nav.toc a{color:var(--text);text-decoration:none}
+  nav.toc a:hover{color:var(--green)}
+  .task{background:var(--panel);border:1px solid var(--border);border-radius:8px;margin-bottom:22px;overflow:hidden}
+  .task>h2{margin:0;padding:14px 20px;font-size:19px;background:#222d45;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center}
+  .task>h2 .num{background:var(--green);color:#111;border-radius:4px;padding:1px 9px;font-size:14px}
+  .body{padding:18px 22px}
+  h3{color:var(--green);font-size:17px;margin:22px 0 8px}
+  code{background:#0b0f16;color:var(--amber);padding:1px 6px;border-radius:4px;font-family:Consolas,"Fira Code",monospace;font-size:14px}
+  .term{background:var(--term);border:1px solid var(--border);border-radius:6px;margin:12px 0;overflow:hidden}
+  .term .bar{background:#1a2233;color:var(--muted);font-size:13px;padding:6px 12px;display:flex;gap:6px;align-items:center}
+  .term .bar i{width:10px;height:10px;border-radius:50%;display:inline-block}
+  .term pre{margin:0;padding:12px 14px;overflow-x:auto;font:13.5px/1.55 Consolas,"Fira Code",monospace;color:#cfe3ff}
+  .c{color:#6b7c99}.k{color:var(--green)}.r{color:var(--red)}.a{color:var(--amber)}
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14.5px}
+  th,td{border:1px solid var(--border);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#222d45;color:var(--green)}
+  tr:nth-child(even) td{background:#182033}
+  .note{border-left:4px solid var(--blue);background:#16233a;padding:10px 14px;border-radius:0 6px 6px 0;margin:12px 0}
+  .warn{border-left-color:var(--amber);background:#2a2316}
+  .bad{border-left-color:var(--red);background:#2a1719}
+  .analogy{border-left-color:var(--green);background:#1a2a16}
+  /* timeline */
+  .timeline{position:relative;margin:18px 0 6px;padding-left:28px}
+  .timeline:before{content:"";position:absolute;left:9px;top:4px;bottom:4px;width:2px;background:var(--border)}
+  .ev{position:relative;margin-bottom:14px}
+  .ev:before{content:"";position:absolute;left:-25px;top:6px;width:14px;height:14px;border-radius:50%;background:var(--muted);border:2px solid var(--bg)}
+  .ev.f:before{background:var(--red)} .ev.s:before{background:var(--green)} .ev.p:before{background:var(--amber)}
+  .ev .t{font-family:Consolas,monospace;color:var(--muted);font-size:13px}
+  .ev b{color:#fff}
+  .qa{background:var(--panel2);border:1px solid var(--border);border-radius:6px;padding:14px 16px;margin-top:16px}
+  .qa h4{margin:0 0 10px;color:var(--muted);font-weight:600}
+  .q{margin:10px 0 14px}
+  details{background:#0b0f16;border:1px solid var(--border);border-radius:5px;padding:7px 12px;margin-top:6px}
+  summary{cursor:pointer;color:var(--green);font-weight:600}
+  ul.check{list-style:none;padding-left:0}
+  ul.check li:before{content:"☐ ";color:var(--green)}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:20px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <span class="tag">Blue Team</span><span class="tag gray">Windows Event Log</span><span class="tag gray">Initial Access · T1133 / T1110</span>
+  <h1>Nhận biết RDP Breach trên file .evtx</h1>
+  <p>Tài liệu tự học theo phong cách room "Windows Threat Detection 1" — đọc log Security.evtx để tìm dấu vết brute-force RDP và đăng nhập thành công của kẻ tấn công.</p>
+</div></header>
+
+<main>
+
+<nav class="toc"><b>Nội dung</b>
+  <ol>
+    <li><a href="#t1">Vì sao RDP là cửa ngõ bị tấn công nhiều nhất</a></li>
+    <li><a href="#t2">Các file .evtx và Event ID cần nhớ</a></li>
+    <li><a href="#t3">Logon Type & mã lỗi đăng nhập</a></li>
+    <li><a href="#t4">Chuỗi sự kiện của một vụ RDP Breach</a></li>
+    <li><a href="#t5">Lọc log bằng Event Viewer & PowerShell</a></li>
+    <li><a href="#t6">Sau khi vào được: hacker làm gì tiếp?</a></li>
+    <li><a href="#t7">Checklist điều tra & câu hỏi luyện tập</a></li>
+  </ol>
+</nav>
+
+<!-- TASK 1 -->
+<section class="task" id="t1">
+  <h2><span class="num">Task 1</span> Vì sao RDP là cửa ngõ bị tấn công nhiều nhất</h2>
+  <div class="body">
+    <p><b>RDP (Remote Desktop Protocol)</b>, mặc định cổng <code>TCP 3389</code>, cho phép điều khiển máy Windows từ xa như đang ngồi trước màn hình. Khi máy chủ mở RDP thẳng ra Internet, bot trên toàn thế giới sẽ liên tục thử user/password — thường chỉ vài phút sau khi máy được bật.</p>
+    <div class="note analogy"><b>🔑 Ví dụ dễ hiểu:</b> RDP giống cửa chính của nhà xưởng. Kẻ trộm không phá cửa mà đứng thử từng chìa khóa trong chùm hàng nghìn chiếc (<i>brute-force</i>), hoặc thử một chìa "phổ biến" lên hàng trăm ổ khóa khác nhau (<i>password spraying</i>). Camera an ninh của bạn chính là <b>Security.evtx</b> — nó ghi lại mỗi lần thử chìa, đúng hay sai.</div>
+    <h3>Hai kiểu tấn công phổ biến</h3>
+    <table>
+      <tr><th>Kiểu</th><th>Mô tả</th><th>Dấu hiệu trong log</th></tr>
+      <tr><td>Brute-force</td><td>1 user (vd: Administrator) × rất nhiều mật khẩu</td><td>Hàng trăm 4625 cùng <code>TargetUserName</code>, cùng IP, trong vài phút</td></tr>
+      <tr><td>Password spraying</td><td>Nhiều user × 1–2 mật khẩu phổ biến</td><td>4625 với nhiều <code>TargetUserName</code> khác nhau, cùng IP nguồn</td></tr>
+      <tr><td>Credential stuffing</td><td>Dùng tài khoản đã lộ từ nơi khác</td><td>Ít lỗi, 4624 thành công gần như ngay — khó phát hiện, phải dựa vào IP/giờ bất thường</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- TASK 2 -->
+<section class="task" id="t2">
+  <h2><span class="num">Task 2</span> Các file .evtx và Event ID cần nhớ</h2>
+  <div class="body">
+    <p>Log nằm tại <code>C:\Windows\System32\winevt\Logs\</code>. Với RDP, cần xem các file sau:</p>
+    <table>
+      <tr><th>File .evtx</th><th>Event ID</th><th>Ý nghĩa</th></tr>
+      <tr><td rowspan="6"><b>Security.evtx</b></td><td><code>4625</code></td><td>Đăng nhập <span class="r">thất bại</span> — bằng chứng chính của brute-force</td></tr>
+      <tr><td><code>4624</code></td><td>Đăng nhập <span class="k">thành công</span> — xem Logon Type 10 / 3 / 7</td></tr>
+      <tr><td><code>4648</code></td><td>Đăng nhập dùng thông tin xác thực tường minh (explicit credentials)</td></tr>
+      <tr><td><code>4634</code> / <code>4647</code></td><td>Logoff / User chủ động logoff</td></tr>
+      <tr><td><code>4778</code> / <code>4779</code></td><td>Phiên RDP được kết nối lại / bị ngắt (có tên client + IP)</td></tr>
+      <tr><td><code>4740</code></td><td>Tài khoản bị khóa do sai mật khẩu quá nhiều lần</td></tr>
+      <tr><td>Microsoft-Windows-TerminalServices-<b>RemoteConnectionManager</b>%4Operational.evtx</td><td><code>1149</code></td><td>Xác thực mạng thành công — có <b>User</b> và <b>Source IP</b> (dù tên là "success", nó chỉ xảy ra trước khi vào phiên)</td></tr>
+      <tr><td rowspan="2">Microsoft-Windows-TerminalServices-<b>LocalSessionManager</b>%4Operational.evtx</td><td><code>21</code> / <code>22</code></td><td>Session logon thành công / Shell (desktop) đã khởi động</td></tr>
+      <tr><td><code>24</code> / <code>25</code></td><td>Session bị ngắt / Session được kết nối lại</td></tr>
+      <tr><td>Microsoft-Windows-RemoteDesktopServices-<b>RdpCoreTS</b>%4Operational.evtx</td><td><code>131</code></td><td>Server chấp nhận kết nối TCP từ IP client</td></tr>
+    </table>
+    <div class="note">💡 Nếu chỉ được nhớ 2 con số: <b>4625</b> (thử sai) và <b>4624 Logon Type 10</b> (vào được bằng RDP).</div>
+  </div>
+</section>
+
+<!-- TASK 3 -->
+<section class="task" id="t3">
+  <h2><span class="num">Task 3</span> Logon Type & mã lỗi đăng nhập</h2>
+  <div class="body">
+    <h3>Logon Type — "đi vào bằng cửa nào?"</h3>
+    <table>
+      <tr><th>Type</th><th>Tên</th><th>Liên quan RDP</th></tr>
+      <tr><td><code>2</code></td><td>Interactive</td><td>Đăng nhập trực tiếp tại bàn phím</td></tr>
+      <tr><td><code>3</code></td><td>Network</td><td><b>Có!</b> Khi RDP bật <b>NLA</b>, bước xác thực trước diễn ra qua mạng → các lần brute-force thất bại thường hiện là <b>4625 Type 3</b></td></tr>
+      <tr><td><code>7</code></td><td>Unlock</td><td>Kết nối lại vào phiên RDP đang bị khóa</td></tr>
+      <tr><td><code>10</code></td><td>RemoteInteractive</td><td><b>Đăng nhập RDP thật sự</b> — mục tiêu chính cần săn</td></tr>
+    </table>
+    <div class="note warn"><b>⚠ Bẫy thường gặp:</b> Nhiều người chỉ lọc 4625 với Logon Type 10 và kết luận "không có brute-force". Với NLA (mặc định từ Windows Server 2012), lỗi RDP xuất hiện dưới dạng <b>Type 3</b>. Hãy luôn lọc cả Type 3 và 10, rồi xem thêm trường <code>IpAddress</code> và <code>WorkstationName</code>.</div>
+
+    <h3>Status / SubStatus trong 4625</h3>
+    <table>
+      <tr><th>Mã</th><th>Ý nghĩa</th><th>Gợi ý</th></tr>
+      <tr><td><code>0xC000006A</code></td><td>User đúng, <b>sai mật khẩu</b></td><td>Kẻ tấn công đã đoán đúng username</td></tr>
+      <tr><td><code>0xC0000064</code></td><td>Username <b>không tồn tại</b></td><td>Đang dò danh sách tên (spraying/enumeration)</td></tr>
+      <tr><td><code>0xC000006D</code></td><td>Sai thông tin đăng nhập (Status chung)</td><td>Xem SubStatus để biết chi tiết</td></tr>
+      <tr><td><code>0xC0000234</code></td><td>Tài khoản đã bị khóa</td><td>Đi kèm 4740</td></tr>
+      <tr><td><code>0xC0000072</code></td><td>Tài khoản bị vô hiệu hóa</td><td>Thử account cũ như Guest</td></tr>
+      <tr><td><code>0xC000006F</code> / <code>0xC0000070</code></td><td>Đăng nhập ngoài giờ / từ máy không được phép</td><td>Chính sách chặn — vẫn đáng chú ý</td></tr>
+    </table>
+
+    <h3>Một bản ghi 4625 trông như thế nào</h3>
+    <div class="term"><div class="bar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i>&nbsp;Event 4625 — An account failed to log on</div>
+<pre>Subject:            Security ID: NULL SID
+<span class="k">Logon Type:</span>         <span class="a">3</span>
+Account For Which Logon Failed:
+    <span class="k">Account Name:</span>   <span class="a">Administrator</span>
+Failure Information:
+    Failure Reason: Unknown user name or bad password.
+    Status:         0xC000006D
+    <span class="k">Sub Status:</span>     <span class="a">0xC000006A</span>      <span class="c"># user đúng, mật khẩu sai</span>
+Network Information:
+    <span class="k">Workstation Name:</span> <span class="r">kali</span>           <span class="c"># tên máy hacker — rất đáng ngờ</span>
+    <span class="k">Source Network Address:</span> <span class="r">203.0.113.45</span>
+    Source Port:    0
+Detailed Authentication Information:
+    Logon Process:  NtLmSsp
+    Authentication Package: NTLM</pre></div>
+  </div>
+</section>
+
+<!-- TASK 4 -->
+<section class="task" id="t4">
+  <h2><span class="num">Task 4</span> Chuỗi sự kiện của một vụ RDP Breach</h2>
+  <div class="body">
+    <p>Một sự kiện đơn lẻ không nói lên nhiều. Cái cần tìm là <b>câu chuyện</b>: nhiều lần thất bại → một lần thành công <u>từ cùng IP</u> → hành vi bất thường ngay sau đó.</p>
+    <div class="timeline">
+      <div class="ev f"><span class="t">02:14:03 → 02:31:47</span><br><b>4625 × 1,284</b> — Logon Type 3, user <code>administrator</code>, <code>admin</code>, <code>user</code>… từ <code>203.0.113.45</code></div>
+      <div class="ev s"><span class="t">02:31:52</span><br><b>1149</b> (RemoteConnectionManager) — User: <code>svc_backup</code>, Source: <code>203.0.113.45</code></div>
+      <div class="ev s"><span class="t">02:31:53</span><br><b>4624</b> — Logon Type <b>10</b>, <code>svc_backup</code>, IP <code>203.0.113.45</code> → ghi lại <code>Logon ID 0x3E7A1F</code></div>
+      <div class="ev s"><span class="t">02:31:55</span><br><b>21 / 22</b> (LocalSessionManager) — Session logon + Shell start</div>
+      <div class="ev p"><span class="t">02:33:10</span><br><b>4688</b> — <code>cmd.exe</code> → <code>whoami /all</code>, <code>net user</code>, <code>net localgroup administrators</code></div>
+      <div class="ev p"><span class="t">02:36:41</span><br><b>4720 + 4732</b> — Tạo user <code>support$</code> và thêm vào nhóm Administrators (persistence)</div>
+      <div class="ev f"><span class="t">02:48:02</span><br><b>1102</b> — Audit log bị xóa (xóa dấu vết)</div>
+    </div>
+    <div class="note analogy"><b>🎬 Ví dụ dễ hiểu:</b> Giống xem lại camera: 17 phút một người thử chìa liên tục (4625) → cánh cửa mở (4624 Type 10) → người đó đi thẳng vào phòng giám đốc lục hồ sơ (4688 whoami/net user) → làm thêm một chìa khóa dự phòng (4720/4732) → cuối cùng rút thẻ nhớ camera (1102).</div>
+    <div class="note">🔗 <b>Logon ID</b> là "sợi chỉ đỏ": lấy <code>TargetLogonId</code> của 4624 rồi tìm nó trong trường <code>SubjectLogonId</code> của các event 4688/4720/4732 để biết hacker đã làm gì trong phiên đó.</div>
+  </div>
+</section>
+
+<!-- TASK 5 -->
+<section class="task" id="t5">
+  <h2><span class="num">Task 5</span> Lọc log bằng Event Viewer & PowerShell</h2>
+  <div class="body">
+    <h3>Cách 1 — Event Viewer (GUI)</h3>
+    <ol>
+      <li>Mở <code>eventvwr.msc</code> → <b>Windows Logs → Security</b> (hoặc <i>Action → Open Saved Log…</i> để mở file .evtx thu thập được).</li>
+      <li><b>Filter Current Log…</b> → nhập <code>4624,4625</code> vào ô Event IDs.</li>
+      <li>Để lọc chính xác Logon Type, chuyển sang tab <b>XML</b> → <i>Edit query manually</i>:</li>
+    </ol>
+    <div class="term"><div class="bar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i>&nbsp;XML Filter — đăng nhập RDP thành công</div>
+<pre>&lt;QueryList&gt;
+  &lt;Query Id="0" Path="Security"&gt;
+    &lt;Select Path="Security"&gt;
+      *[System[(EventID=<span class="a">4624</span>)]]
+      and *[EventData[Data[@Name='LogonType']='<span class="a">10</span>']]
+    &lt;/Select&gt;
+  &lt;/Query&gt;
+&lt;/QueryList&gt;</pre></div>
+
+    <h3>Cách 2 — PowerShell (nhanh khi log lớn)</h3>
+    <div class="term"><div class="bar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i>&nbsp;PowerShell — Top IP brute-force</div>
+<pre><span class="c"># Đếm số lần đăng nhập thất bại theo IP nguồn</span>
+<span class="k">Get-WinEvent</span> -Path .\Security.evtx -FilterXPath "*[System[EventID=4625]]" |
+  ForEach-Object {
+    $x = [xml]$_.ToXml()
+    $d = @{}; $x.Event.EventData.Data | % { $d[$_.Name] = $_.'#text' }
+    [pscustomobject]@{ IP=$d.IpAddress; User=$d.TargetUserName; Type=$d.LogonType }
+  } |
+  <span class="k">Group-Object</span> IP | Sort-Object Count -Descending |
+  Select-Object Count, Name -First 10</pre></div>
+
+    <div class="term"><div class="bar"><i style="background:#ff5f56"></i><i style="background:#ffbd2e"></i><i style="background:#27c93f"></i>&nbsp;PowerShell — IP nào vừa thất bại vừa thành công?</div>
+<pre>$fail = <span class="k">Get-WinEvent</span> -Path .\Security.evtx -FilterXPath "*[System[EventID=4625]]" |
+  % { ([xml]$_.ToXml()).Event.EventData.Data | ? Name -eq 'IpAddress' | % '#text' } |
+  Sort-Object -Unique
+
+<span class="k">Get-WinEvent</span> -Path .\Security.evtx -FilterXPath `
+  "*[System[EventID=4624]] and *[EventData[Data[@Name='LogonType']='10' or Data[@Name='LogonType']='3']]" |
+  % {
+    $d=@{}; ([xml]$_.ToXml()).Event.EventData.Data | % { $d[$_.Name]=$_.'#text' }
+    if ($fail -contains $d.IpAddress) {
+      [pscustomobject]@{ Time=$_.TimeCreated; User=$d.TargetUserName; IP=$d.IpAddress;
+                         Type=$d.LogonType; LogonId=$d.TargetLogonId }
+    }
+  } | Format-Table -AutoSize   <span class="r"># ← mỗi dòng ở đây là một BREACH tiềm năng</span></pre></div>
+
+    <div class="note">🛠 Công cụ tự động hóa khi có nhiều file: <b>Hayabusa</b> và <b>Chainsaw</b> (dùng rule Sigma) quét hàng loạt .evtx và gắn cờ brute-force/RDP logon đáng ngờ chỉ trong vài giây.</div>
+  </div>
+</section>
+
+<!-- TASK 6 -->
+<section class="task" id="t6">
+  <h2><span class="num">Task 6</span> Sau khi vào được: hacker làm gì tiếp?</h2>
+  <div class="body">
+    <p>Một lần 4624 Type 10 từ IP lạ chưa chắc là tấn công (có thể là IT đang làm việc từ xa). Bằng chứng mạnh nhất là <b>hành vi ngay sau khi đăng nhập</b>:</p>
+    <table>
+      <tr><th>Giai đoạn</th><th>Event ID</th><th>Ví dụ</th></tr>
+      <tr><td>Discovery (trinh sát)</td><td><code>4688</code> / Sysmon <code>1</code></td><td><code>whoami</code>, <code>net user</code>, <code>ipconfig /all</code>, <code>nltest /dclist</code></td></tr>
+      <tr><td>Persistence</td><td><code>4720</code>, <code>4732</code>, <code>7045</code>, <code>4698</code></td><td>Tạo user mới, thêm vào Administrators, cài service, tạo Scheduled Task</td></tr>
+      <tr><td>Defense Evasion</td><td><code>1102</code>, <code>104</code> (System), Defender <code>5001</code></td><td>Xóa log Security/System, tắt Real-time Protection</td></tr>
+      <tr><td>Execution / Impact</td><td><code>4688</code>, PowerShell <code>4104</code></td><td>Tải malware, chạy ransomware, <code>vssadmin delete shadows</code></td></tr>
+    </table>
+    <div class="note bad"><b>🚨 Dấu hiệu "chắc chắn có chuyện":</b> 4625 hàng loạt → 4624 Type 10 cùng IP → trong vòng vài phút có 4720/4732 hoặc 1102. Đây là lúc cần isolate máy ngay.</div>
+    <div class="note warn"><b>Lưu ý:</b> Event 4688 chỉ có nếu bật <i>Audit Process Creation</i>; muốn thấy cả command line phải bật thêm <i>"Include command line in process creation events"</i>. Nếu không có, hãy tìm trong Sysmon hoặc PowerShell Operational log.</div>
+  </div>
+</section>
+
+<!-- TASK 7 -->
+<section class="task" id="t7">
+  <h2><span class="num">Task 7</span> Checklist điều tra & câu hỏi luyện tập</h2>
+  <div class="body">
+    <h3>Checklist khi nhận file .evtx nghi bị RDP breach</h3>
+    <ul class="check">
+      <li>Đếm 4625 theo IP và theo user — có IP nào vượt hàng chục/hàng trăm lần?</li>
+      <li>Xem SubStatus: <code>0xC0000064</code> (dò tên) hay <code>0xC000006A</code> (đoán mật khẩu user có thật)?</li>
+      <li>Tìm 4624 Type 10 (và Type 3) từ chính các IP đó — ghi lại thời gian, user, Logon ID.</li>
+      <li>Đối chiếu 1149 và 21/22/24/25 trong TerminalServices log để xác nhận phiên RDP.</li>
+      <li>Lần theo Logon ID → 4688, 4720, 4732, 7045, 4698 trong phiên đó.</li>
+      <li>Kiểm tra 1102 / 104 — log có bị xóa không? Khoảng thời gian nào bị "trống"?</li>
+      <li>Kiểm tra <code>WorkstationName</code> lạ (kali, WIN-XXXX, rỗng) và IP ngoài phạm vi công ty.</li>
+      <li>Khuyến nghị: tắt RDP ra Internet, dùng VPN/MFA, bật NLA, khóa tài khoản sau N lần sai.</li>
+    </ul>
+
+    <div class="qa">
+      <h4>Answer the questions below</h4>
+      <div class="q">1. Event ID nào ghi lại một lần đăng nhập thất bại?
+        <details><summary>Xem đáp án</summary><code>4625</code></details></div>
+      <div class="q">2. Đăng nhập RDP thành công có Logon Type bao nhiêu trong event 4624?
+        <details><summary>Xem đáp án</summary><code>10</code> (RemoteInteractive)</details></div>
+      <div class="q">3. Vì sao các lần brute-force RDP thất bại hay hiện là Logon Type 3?
+        <details><summary>Xem đáp án</summary>Vì NLA (Network Level Authentication) xác thực người dùng qua mạng trước khi mở phiên desktop, nên lỗi được ghi dưới dạng Network logon (Type 3).</details></div>
+      <div class="q">4. SubStatus <code>0xC0000064</code> cho bạn biết điều gì?
+        <details><summary>Xem đáp án</summary>Username không tồn tại — kẻ tấn công đang dò tên tài khoản.</details></div>
+      <div class="q">5. Trường nào giúp nối event đăng nhập 4624 với các lệnh hacker chạy (4688) sau đó?
+        <details><summary>Xem đáp án</summary><code>TargetLogonId</code> của 4624 ↔ <code>SubjectLogonId</code> của 4688.</details></div>
+      <div class="q">6. Event 1149 nằm trong file log nào?
+        <details><summary>Xem đáp án</summary>Microsoft-Windows-TerminalServices-RemoteConnectionManager%4Operational.evtx</details></div>
+      <div class="q">7. Event ID nào cho thấy Security log đã bị xóa?
+        <details><summary>Xem đáp án</summary><code>1102</code></details></div>
+    </div>
+  </div>
+</section>
+
+</main>
+<footer>Tài liệu tự học · Windows Threat Detection — RDP Breach · MITRE ATT&amp;CK T1110 (Brute Force), T1133 / T1021.001 (Remote Desktop Protocol)</footer>
+</body>
+</html>

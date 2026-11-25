@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Điều tra RDP Brute Force – RDP-Security.evtx</title>
+<style>
+:root{
+  --bg:#0f1419; --panel:#161d26; --panel2:#1c2531; --line:#2a3644;
+  --text:#d9e1ea; --muted:#8b9bb0; --accent:#4fb3ff; --red:#ff6b6b; --green:#4cd38a;
+  --amber:#ffc35c; --purple:#b48cff; --code:#0b1016;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.65 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:1080px;margin:0 auto;padding:28px 20px 80px}
+header h1{font-size:28px;margin:0 0 6px}
+header p{color:var(--muted);margin:0}
+nav.toc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 18px;margin:22px 0}
+nav.toc b{display:block;margin-bottom:6px}
+nav.toc a{display:inline-block;margin:3px 14px 3px 0;text-decoration:none;font-size:14px}
+h2{font-size:22px;margin:44px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+h3{font-size:17px;margin:26px 0 8px;color:#fff}
+.muted{color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:18px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.card .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.card .val{font-size:22px;font-weight:700;margin:4px 0;font-family:Consolas,monospace}
+.card.red{border-left:4px solid var(--red)} .card.red .val{color:var(--red)}
+.card.amber{border-left:4px solid var(--amber)} .card.amber .val{color:var(--amber)}
+.card.purple{border-left:4px solid var(--purple)} .card.purple .val{color:var(--purple)}
+.card.green{border-left:4px solid var(--green)} .card.green .val{color:var(--green)}
+.card small{color:var(--muted);font-size:13px}
+.note,.warn,.tip,.analogy{border-radius:10px;padding:12px 16px;margin:14px 0;border:1px solid var(--line)}
+.note{background:#132233;border-left:4px solid var(--accent)}
+.warn{background:#2a1a1a;border-left:4px solid var(--red)}
+.tip{background:#13261c;border-left:4px solid var(--green)}
+.analogy{background:#221d33;border-left:4px solid var(--purple)}
+.analogy::before{content:"🏨 Ví von: ";font-weight:700;color:var(--purple)}
+.warn::before{content:"⚠ Bẫy: ";font-weight:700;color:var(--red)}
+.tip::before{content:"✔ Mẹo: ";font-weight:700;color:var(--green)}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--panel2);color:#fff}
+td code,p code,li code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:13px}
+tr.hl td{background:#2a2316}
+.pre{position:relative;margin:10px 0 16px}
+pre{background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:13px/1.55 Consolas,"Cascadia Code",monospace;margin:0;color:#cfe3f5}
+pre .c{color:#6f8299} pre .k{color:#ff9ec4} pre .s{color:#a5e88f} pre .o{color:var(--amber)}
+.copy{position:absolute;top:8px;right:8px;background:var(--panel2);color:var(--muted);border:1px solid var(--line);border-radius:6px;font-size:12px;padding:3px 9px;cursor:pointer}
+.copy:hover{color:#fff}
+.out{border-left:3px solid var(--amber)}
+.out::before{content:"Kết quả với file này";display:block;font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:"Segoe UI",sans-serif}
+.step{display:flex;gap:14px;margin:22px 0}
+.step .n{flex:0 0 38px;height:38px;border-radius:50%;background:var(--accent);color:#001425;font-weight:800;display:flex;align-items:center;justify-content:center}
+.step.ev .n{background:var(--purple)}
+.step .b{flex:1;min-width:0}
+.step .b h3{margin-top:6px}
+.tabs{display:flex;gap:8px;margin:20px 0 0}
+.tabs button{background:var(--panel);color:var(--muted);border:1px solid var(--line);border-bottom:none;border-radius:10px 10px 0 0;padding:10px 18px;font-size:15px;cursor:pointer}
+.tabs button.on{background:var(--panel2);color:#fff;font-weight:700}
+.tabpanel{display:none;background:var(--panel2);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:6px 22px 20px}
+.tabpanel.on{display:block}
+.bar{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:13px;font-family:Consolas,monospace}
+.bar .nm{flex:0 0 150px;text-align:right;color:var(--muted)}
+.bar .tr{flex:1;background:var(--panel2);border-radius:4px;height:18px;overflow:hidden}
+.bar .fl{height:100%;background:linear-gradient(90deg,#ff6b6b,#ff9b6b)}
+.bar .fl.b{background:linear-gradient(90deg,#4fb3ff,#7fd0ff)}
+.bar .ct{flex:0 0 50px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:760px){.grid2{grid-template-columns:1fr}.bar .nm{flex-basis:110px}}
+/* chain diagram */
+.chain{margin:16px 0}
+.node{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13.5px;position:relative}
+.node .t{font-family:Consolas,monospace;font-weight:700}
+.node.r{border-color:#6b3434} .node.y{border-color:#6b5a2c} .node.p{border-color:#4f3f7a} .node.g{border-color:#2f6b49} .node.x{border-style:dashed;opacity:.85}
+.node .tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.tag.r{background:#4a2020;color:#ffb3b3}.tag.y{background:#4a3d1a;color:#ffd98a}.tag.p{background:#33295a;color:#d6c4ff}.tag.g{background:#1b4430;color:#a6f0c6}
+.arrow{text-align:center;color:var(--muted);font-size:13px;margin:4px 0}
+.arrow b{color:var(--amber);font-family:Consolas,monospace;font-weight:600}
+.indent{margin-left:34px;border-left:2px dashed var(--line);padding-left:16px}
+.kv{font-family:Consolas,monospace;font-size:12.5px;color:var(--muted)}
+.kv em{color:var(--amber);font-style:normal}
+.timeline{position:relative;height:96px;margin:18px 0 6px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.timeline .rng{position:absolute;top:30px;height:16px;background:repeating-linear-gradient(90deg,#ff6b6b55 0 3px,transparent 3px 6px);border-radius:4px}
+.timeline .pin{position:absolute;top:14px;width:2px;height:48px;background:var(--green)}
+.timeline .pin span{position:absolute;top:50px;left:-60px;width:120px;text-align:center;font-size:12px;color:var(--green)}
+.timeline .lab{position:absolute;top:66px;font-size:12px;color:var(--muted);font-family:Consolas,monospace}
+.fieldmap{font-family:Consolas,monospace;font-size:13px;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;line-height:1.75;overflow-x:auto;white-space:pre}
+.fieldmap .h{color:#fff;font-weight:700}
+.fieldmap .x{background:#4a3d1a;color:#ffd98a;padding:0 4px;border-radius:3px}
+.fieldmap .rr{background:#4a2020;color:#ffb3b3;padding:0 4px;border-radius:3px}
+footer{margin-top:50px;color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>🔍 Điều tra RDP Brute Force từ Security log</h1>
+  <p>File phân tích: <code>RDP-Security.evtx</code> (kèm <code>RDP-Security_1033.MTA</code>) · Host nạn nhân: <code>WIN-F89VT9IER10</code> · Dữ liệu ngày 20/05/2025</p>
+</header>
+
+<nav class="toc">
+  <b>Mục lục</b>
+  <a href="#ketqua">0. Đáp án</a>
+  <a href="#nen">1. Kiến thức nền (ID, Logon Type, mã lỗi)</a>
+  <a href="#quytrinh">2. Quy trình tư duy</a>
+  <a href="#thuchanh">3. Thực hành: PowerShell / Event Viewer</a>
+  <a href="#chame">4. Event cha – con: nối các event với nhau</a>
+  <a href="#bay">5. Bẫy thường gặp</a>
+  <a href="#cheat">6. Cheat sheet</a>
+</nav>
+
+<!-- ============ 0 ============ -->
+<h2 id="ketqua">0. Đáp án (kiểm chứng trực tiếp trên file)</h2>
+<div class="cards">
+  <div class="card red"><div class="lbl">User bị brute force</div><div class="val">Administrator</div><small>1.018 lần 4625 (ADMINISTRATOR + Administrator), SubStatus <code>0xC000006A</code> = <b>sai mật khẩu</b> → tài khoản có thật</small></div>
+  <div class="card amber"><div class="lbl">IP đã breach qua RDP</div><div class="val">203.205.34.107</div><small>Có 4624 <b>LogonType 10</b> (RemoteInteractive), lúc 09:51:48 UTC (16:51:48 giờ VN)</small></div>
+  <div class="card purple"><div class="lbl">Workstation của attacker</div><div class="val">DESKTOP-QNBC4UU</div><small>Lấy từ 4624 <b>LogonType 3</b> (bước NLA), <u>không</u> lấy từ event Type 10</small></div>
+  <div class="card green"><div class="lbl">Quy mô tấn công</div><div class="val">1.559 / 41 IP</div><small>1.559 lần đăng nhập thất bại từ 41 IP trong ~50 phút (09:10 → 09:59 UTC)</small></div>
+</div>
+<div class="note">
+<b>Chi tiết đáng chú ý:</b> 2 giây trước phiên RDP, còn có một 4624 Type 3 từ <code>118.69.32.92</code>, <b>cùng workstation DESKTOP-QNBC4UU</b>, cùng tài khoản Administrator. Đây là IP thứ hai của cùng một attacker (đăng nhập NLA thành công nhưng <i>không</i> mở phiên desktop). IP mở được phiên RDP thật là <code>203.205.34.107</code>. Cả hai IP này <b>không hề có</b> trong 1.559 event 4625: nhóm IP đi dò mật khẩu và IP vào "lấy hàng" là hai nhóm khác nhau.
+</div>
+
+<div class="timeline" title="Dòng thời gian 09:10 – 10:00 UTC">
+  <div class="rng" style="left:2%;width:96%"></div>
+  <div class="pin" style="left:83.5%"><span>09:51:48 BREACH</span></div>
+  <div class="lab" style="left:1%">09:10 UTC</div>
+  <div class="lab" style="left:48%">09:35</div>
+  <div class="lab" style="right:1%">10:00</div>
+</div>
+<p class="muted" style="font-size:13px">Vạch đỏ: các 4625 dồn dập suốt 50 phút. Vạch xanh: thời điểm attacker vào được. Sau breach vẫn còn 253 lần thất bại nữa: các bot dò mật khẩu không biết đã có kẻ vào được.</p>
+
+<!-- ============ 1 ============ -->
+<h2 id="nen">1. Kiến thức nền</h2>
+
+<div class="analogy">Hãy coi máy chủ là một <b>khách sạn</b>. Security log là <b>sổ của bảo vệ</b>.
+<b>4625</b> = "có người quẹt thẻ sai ở cửa". <b>4624</b> = "cửa đã mở cho ai đó". <b>Logon Type</b> = <i>cửa nào</i> được mở (cửa phòng, cửa dịch vụ, cửa từ xa...).
+<b>Logon ID</b> = <b>số vòng tay</b> phát cho khách khi vào: mọi việc vị khách làm sau đó (dùng đặc quyền, chạy chương trình, ra về) đều được ghi kèm số vòng tay này. Đó chính là sợi dây nối event "cha" với event "con".</div>
+
+<h3>1.1 Event ID cần biết cho RDP</h3>
+<table>
+<tr><th>Event ID</th><th>Log</th><th>Ý nghĩa</th><th>Dùng để</th></tr>
+<tr class="hl"><td><b>4625</b></td><td>Security</td><td>An account failed to log on</td><td>Phát hiện brute force: đếm theo user, IP</td></tr>
+<tr class="hl"><td><b>4624</b></td><td>Security</td><td>An account was successfully logged on</td><td>Tìm lần breach, IP, workstation, Logon ID</td></tr>
+<tr><td>4672</td><td>Security</td><td>Special privileges assigned to new logon</td><td>Con của 4624: phiên này có quyền admin</td></tr>
+<tr><td>4648</td><td>Security</td><td>Logon using explicit credentials</td><td>Đăng nhập bằng credential gõ tay (runas, RDP đi ra ngoài)</td></tr>
+<tr><td>4634 / 4647</td><td>Security</td><td>Logoff / User initiated logoff</td><td>Kết thúc phiên (khớp bằng TargetLogonId)</td></tr>
+<tr><td>4778 / 4779</td><td>Security</td><td>Session reconnected / disconnected</td><td>RDP nối lại / ngắt (có Client Name, Client Address)</td></tr>
+<tr><td>4688</td><td>Security</td><td>A new process has been created</td><td>Attacker làm gì sau khi vào (nếu bật audit)</td></tr>
+<tr><td>1149</td><td>TerminalServices-RemoteConnectionManager/Operational</td><td>User authentication succeeded</td><td>Xác nhận RDP xác thực thành công + IP nguồn</td></tr>
+<tr><td>21 / 22 / 25 / 24 / 23</td><td>TerminalServices-LocalSessionManager/Operational</td><td>Logon / Shell start / Reconnect / Disconnect / Logoff</td><td>Vòng đời phiên RDP theo <b>Session ID</b></td></tr>
+<tr><td>131 / 140</td><td>RemoteDesktopServices-RdpCoreTS/Operational</td><td>Accepted connection / failed connection</td><td>Kết nối TCP đến cổng 3389 (kể cả trước khi xác thực)</td></tr>
+</table>
+<p class="muted">File bài lab này <b>chỉ chứa 4624 và 4625</b> (đã được lọc trước khi export), nên phần dưới tập trung vào hai ID này. Cách nhận biết file đã bị lọc: xem mục 4.5.</p>
+
+<h3>1.2 Logon Type: "cửa nào" được mở</h3>
+<table>
+<tr><th>Type</th><th>Tên</th><th>Ví dụ</th><th>Trong file này</th></tr>
+<tr><td>2</td><td>Interactive</td><td>Ngồi trước máy gõ mật khẩu; cũng dùng cho tài khoản hệ thống UMFD-x, DWM-x</td><td>UMFD-3, DWM-3 (dấu hiệu session 3 vừa được tạo)</td></tr>
+<tr class="hl"><td>3</td><td>Network</td><td>Truy cập share, SMB… <b>và bước NLA của RDP</b></td><td>Toàn bộ 1.559 lần 4625 + 2 lần 4624 thành công</td></tr>
+<tr><td>5</td><td>Service</td><td>Dịch vụ khởi động dưới SYSTEM</td><td>2 event SYSTEM / services.exe (nhiễu)</td></tr>
+<tr><td>7</td><td>Unlock</td><td>Mở khoá màn hình</td><td>–</td></tr>
+<tr class="hl"><td>10</td><td>RemoteInteractive</td><td><b>Phiên RDP thật sự có desktop</b></td><td>1 event: Administrator từ 203.205.34.107</td></tr>
+<tr><td>11</td><td>CachedInteractive</td><td>Đăng nhập bằng credential cache khi mất kết nối DC</td><td>–</td></tr>
+</table>
+
+<div class="analogy">Vì sao brute force RDP lại hiện là <b>Type 3</b> chứ không phải 10? RDP hiện đại bật <b>NLA</b> (Network Level Authentication): bảo vệ kiểm tra thẻ ngay <i>ở cổng ngoài</i> (Type 3, qua NTLM/CredSSP) trước khi cho bạn vào sảnh. Chỉ khi qua cổng rồi bạn mới được dẫn tới phòng và mở cửa phòng (<b>Type 10</b>). Kẻ brute force bị chặn ngay ở cổng, nên chỉ để lại 4625 Type 3.</div>
+
+<h3>1.3 Mã lỗi Status / SubStatus trong 4625</h3>
+<table>
+<tr><th>Mã</th><th>Ý nghĩa</th><th>Diễn giải khi điều tra</th></tr>
+<tr><td><code>0xC000006D</code></td><td>Status chung: bad username or password</td><td>Luôn xuất hiện ở trường Status, cần xem tiếp SubStatus</td></tr>
+<tr class="hl"><td><code>0xC000006A</code></td><td>User đúng, <b>mật khẩu sai</b></td><td>Tài khoản <b>tồn tại</b> → mục tiêu brute force thật (Administrator, Guest)</td></tr>
+<tr class="hl"><td><code>0xC0000064</code></td><td><b>User không tồn tại</b></td><td>Attacker đoán tên (ADMIN, USER, TEST…) → dò username / spray</td></tr>
+<tr><td><code>0xC0000234</code></td><td>Tài khoản bị khoá</td><td>Brute force đã kích hoạt lockout policy</td></tr>
+<tr><td><code>0xC0000072</code></td><td>Tài khoản bị vô hiệu hoá</td><td>Đoán đúng tên nhưng account disabled</td></tr>
+<tr><td><code>0xC000006F / 0xC0000070</code></td><td>Sai giờ / sai máy được phép</td><td>Bị chặn bởi giới hạn đăng nhập</td></tr>
+<tr><td><code>0xC0000071 / 0xC0000224</code></td><td>Mật khẩu hết hạn / phải đổi</td><td>Mật khẩu ĐÚNG nhưng hết hạn → đáng lo!</td></tr>
+</table>
+
+<!-- ============ 2 ============ -->
+<h2 id="quytrinh">2. Quy trình tư duy: 3 câu hỏi, 3 bước</h2>
+<table>
+<tr><th>#</th><th>Câu hỏi</th><th>Lọc gì</th><th>Đọc trường nào</th><th>Logic kết luận</th></tr>
+<tr><td>1</td><td>User nào bị brute force?</td><td>ID <b>4625</b></td><td><code>TargetUserName</code> + <code>SubStatus</code></td><td>User có nhiều lần thất bại nhất <b>và</b> SubStatus = 0xC000006A (tồn tại)</td></tr>
+<tr><td>2</td><td>IP nào đã breach?</td><td>ID <b>4624</b>, LogonType <b>10</b> (và 3)</td><td><code>IpAddress</code>, <code>TargetUserName</code>, <code>LogonType</code></td><td>4624 Type 10 với IP bên ngoài = phiên RDP thành công</td></tr>
+<tr><td>3</td><td>Workstation của attacker?</td><td>ID <b>4624</b> LogonType <b>3</b> ngay trước Type 10, cùng IP</td><td><code>WorkstationName</code></td><td>Type 3 (NLA) ghi tên máy client; Type 10 ghi tên máy <i>chính host</i></td></tr>
+</table>
+
+<!-- ============ 3 ============ -->
+<h2 id="thuchanh">3. Thực hành</h2>
+<p>Chọn tab theo cách bạn muốn làm. Hai hướng đi qua cùng các bước, chỉ khác công cụ.</p>
+<div class="note">Chuẩn bị chung: chép <code>RDP-Security.evtx</code> vào <code>C:\Lab\</code>. Tạo thư mục <code>C:\Lab\LocaleMetaData\</code> và đặt file MTA vào đó với tên đúng <code>RDP-Security_1033.MTA</code> (bỏ tiền tố lạ nếu có). File <b>.MTA</b> chứa nội dung mô tả (message template) bằng tiếng Anh (1033 = en-US) để Event Viewer hiển thị đúng phần mô tả ở máy khác. Với 4624/4625 thì Windows nào cũng có sẵn template, nên thiếu MTA vẫn đọc được.</div>
+
+<div class="tabs">
+  <button class="on" data-t="ps">① PowerShell</button>
+  <button data-t="ev">② Event Viewer</button>
+</div>
+
+<!-- ===== PowerShell ===== -->
+<div class="tabpanel on" id="tab-ps">
+
+<div class="step"><div class="n">0</div><div class="b">
+<h3>Mở PowerShell và tạo hàm "bóc" EventData</h3>
+<p>Mỗi event là một bản XML. Cột <code>Message</code> chỉ là chữ để người đọc; muốn lọc/đếm chính xác thì phải bóc các trường <code>&lt;Data Name="..."&gt;</code> ra thành cột. Hàm dưới đây biến mỗi event thành một "hàng Excel".</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$log</span> = <span class="s">"C:\Lab\RDP-Security.evtx"</span>
+
+<span class="k">function</span> ConvertTo-EvtObject {
+  <span class="k">process</span> {
+    <span class="o">$x</span> = [xml]<span class="o">$_</span>.ToXml()
+    <span class="o">$o</span> = [ordered]@{
+      TimeUTC  = <span class="o">$_</span>.TimeCreated.ToUniversalTime()
+      Id       = <span class="o">$_</span>.Id
+      RecordId = <span class="o">$_</span>.RecordId
+    }
+    <span class="k">foreach</span> (<span class="o">$d</span> <span class="k">in</span> <span class="o">$x</span>.Event.EventData.Data) { <span class="o">$o</span>[<span class="o">$d</span>.Name] = <span class="o">$d</span>.<span class="s">'#text'</span> }
+    [pscustomobject]<span class="o">$o</span>
+  }
+}
+
+<span class="c"># Đọc toàn bộ file một lần, dùng lại cho các bước sau</span>
+<span class="o">$all</span> = Get-WinEvent -Path <span class="o">$log</span> -Oldest | ConvertTo-EvtObject
+<span class="o">$all</span> | Group-Object Id | Select-Object Count, Name</pre></div>
+<div class="pre"><pre class="out">Count Name
+----- ----
+ 1559 4625
+    8 4624</pre></div>
+<div class="tip"><code>TimeCreated</code> mặc định hiển thị theo giờ máy bạn (VN = UTC+7). Mình đổi sang UTC để khớp với các báo cáo / SIEM. Giờ VN = giờ UTC + 7.</div>
+</div></div>
+
+<div class="step"><div class="n">1</div><div class="b">
+<h3>Câu 1: User nào bị brute force?</h3>
+<p>Lọc 4625, nhóm theo <code>TargetUserName</code> (tên tài khoản bị thử), sắp xếp giảm dần.</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$fail</span> = <span class="o">$all</span> | Where-Object Id -eq 4625
+<span class="c"># hoặc lọc ngay lúc đọc (nhanh hơn với file lớn):</span>
+<span class="c"># $fail = Get-WinEvent -FilterHashtable @{Path=$log; Id=4625} | ConvertTo-EvtObject</span>
+
+<span class="o">$fail</span> | Group-Object TargetUserName |
+  Sort-Object Count -Descending | Select-Object -First 8 Count, Name</pre></div>
+<div class="pre"><pre class="out">Count Name
+----- ----
+ 1018 ADMINISTRATOR      ← Group-Object không phân biệt hoa/thường: gộp 1011 "ADMINISTRATOR" + 7 "Administrator"
+  169 ADMIN
+  102 USER
+   69 USER1
+   68 TEST
+   65 USER2
+   13 GUEST
+    4 USER3</pre></div>
+<p>Nhiều lần thử chưa đủ để kết luận. Cần xem <b>SubStatus</b> để biết tài khoản đó có thật hay không:</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$fail</span> | Group-Object TargetUserName, SubStatus |
+  Sort-Object Count -Descending | Select-Object -First 8 Count, Name</pre></div>
+<div class="pre"><pre class="out">Count Name
+----- ----
+ 1018 ADMINISTRATOR, 0xc000006a   ← mật khẩu sai → account TỒN TẠI → mục tiêu thật
+  169 ADMIN, 0xc0000064           ← user không tồn tại (đoán mò)
+  102 USER, 0xc0000064
+   69 USER1, 0xc0000064
+   68 TEST, 0xc0000064
+   65 USER2, 0xc0000064
+   13 GUEST, 0xc000006a           ← tồn tại (nhưng thường disabled)
+    4 USER3, 0xc0000064</pre></div>
+<p>➜ <b>Kết luận: Administrator</b> bị brute force (1.018 lần, SubStatus 0xC000006A).</p>
+<p>Bổ sung bối cảnh: số IP, IP dò nhiều nhất, khoảng thời gian:</p>
+<div class="pre"><button class="copy">Copy</button><pre>(<span class="o">$fail</span>.IpAddress | Sort-Object -Unique).Count          <span class="c"># số IP tấn công</span>
+<span class="o">$fail</span> | Group-Object IpAddress | Sort-Object Count -Descending | Select-Object -First 5 Count, Name
+<span class="o">$fail</span> | Measure-Object TimeUTC -Minimum -Maximum | Select-Object Minimum, Maximum
+<span class="o">$fail</span> | Group-Object LogonType, LogonProcessName, AuthenticationPackageName | Select Count, Name</pre></div>
+<div class="pre"><pre class="out">41
+Count Name
+----- ----
+  257 110.39.6.180
+  195 41.231.229.76
+  119 172.232.4.244
+   92 157.66.47.222
+   87 102.88.21.218
+Minimum : 20/05/2025 09:10:01   Maximum : 20/05/2025 09:59:55
+ 1559 3, NtLmSsp , NTLM          ← tất cả là Type 3 qua NTLM = bị chặn ở bước NLA</pre></div>
+</div></div>
+
+<div class="step"><div class="n">2</div><div class="b">
+<h3>Câu 2: IP nào đã breach vào host qua RDP?</h3>
+<p>Lọc 4624, bỏ các logon nội bộ (IP = <code>-</code>), hiển thị các cột quan trọng:</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$ok</span> = <span class="o">$all</span> | Where-Object Id -eq 4624
+<span class="o">$ok</span> | Where-Object { <span class="o">$_</span>.IpAddress -notin <span class="s">'-'</span>,<span class="s">'127.0.0.1'</span>,<span class="s">'::1'</span> } |
+  Format-Table TimeUTC, RecordId, TargetUserName, LogonType, LogonProcessName,
+               IpAddress, WorkstationName, TargetLogonId -AutoSize</pre></div>
+<div class="pre"><pre class="out">TimeUTC              RecordId TargetUserName LogonType LogonProcessName IpAddress      WorkstationName  TargetLogonId
+-------              -------- -------------- --------- ---------------- ---------      ---------------  -------------
+20/05/2025 09:51:45  19988802 Administrator  3         NtLmSsp          118.69.32.92   DESKTOP-QNBC4UU  0x9c3015c0
+20/05/2025 09:51:45  19988806 Administrator  3         NtLmSsp          203.205.34.107 DESKTOP-QNBC4UU  0x9c3016c0
+20/05/2025 09:51:48  19988821 Administrator  10        User32           203.205.34.107 WIN-F89VT9IER10  0x9c306841</pre></div>
+<p>Cách làm chuẩn hơn: lọc thẳng Type 10 bằng <b>XPath</b> (chạy ngay trong bộ máy event log, rất nhanh với file hàng GB):</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$xp</span> = <span class="s">"*[System[EventID=4624] and EventData[Data[@Name='LogonType']='10']]"</span>
+Get-WinEvent -Path <span class="o">$log</span> -FilterXPath <span class="o">$xp</span> | ConvertTo-EvtObject |
+  Select-Object TimeUTC, TargetUserName, IpAddress, ProcessName, TargetLogonId</pre></div>
+<div class="pre"><pre class="out">TimeUTC        : 20/05/2025 09:51:48
+TargetUserName : Administrator
+IpAddress      : 203.205.34.107
+ProcessName    : C:\Windows\System32\svchost.exe     ← TermService (dịch vụ RDP)
+TargetLogonId  : 0x9c306841</pre></div>
+<p>➜ <b>Kết luận: 203.205.34.107</b> mở được phiên RDP (Type 10) với tài khoản Administrator.</p>
+<p>Kiểm tra chéo: IP thành công có nằm trong nhóm IP brute force không?</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$badIPs</span> = <span class="o">$fail</span>.IpAddress | Sort-Object -Unique
+<span class="o">$ok</span> | Where-Object { <span class="o">$_</span>.IpAddress -in <span class="o">$badIPs</span> }       <span class="c"># → rỗng</span></pre></div>
+<div class="note">Kết quả rỗng nghĩa là attacker dùng hạ tầng tách biệt: một nhóm IP (botnet/proxy) dò mật khẩu, IP khác vào khi đã có mật khẩu. Vì vậy <b>không được kết luận "IP breach = IP brute force nhiều nhất"</b>. Phải đi từ 4624.</div>
+</div></div>
+
+<div class="step"><div class="n">3</div><div class="b">
+<h3>Câu 3: Workstation Name của threat actor</h3>
+<p>Trong event Type 10, <code>WorkstationName</code> = <code>WIN-F89VT9IER10</code>, là tên <b>chính host nạn nhân</b>. Tên máy của attacker nằm ở event <b>Type 3 (NLA)</b> cùng IP, xảy ra ngay trước đó:</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$rdp</span> = <span class="o">$ok</span> | Where-Object LogonType -eq <span class="s">'10'</span>
+<span class="o">$ok</span> | Where-Object {
+    <span class="o">$_</span>.LogonType -eq <span class="s">'3'</span> -and
+    <span class="o">$_</span>.IpAddress -eq <span class="o">$rdp</span>.IpAddress -and
+    <span class="o">$_</span>.TimeUTC -ge <span class="o">$rdp</span>.TimeUTC.AddSeconds(-30) -and <span class="o">$_</span>.TimeUTC -le <span class="o">$rdp</span>.TimeUTC
+} | Select-Object TimeUTC, IpAddress, WorkstationName, LmPackageName, TargetUserSid</pre></div>
+<div class="pre"><pre class="out">TimeUTC         : 20/05/2025 09:51:45
+IpAddress       : 203.205.34.107
+WorkstationName : DESKTOP-QNBC4UU
+LmPackageName   : NTLM V2
+TargetUserSid   : S-1-5-21-1592303528-961660316-3103943273-500   ← RID 500 = Administrator built-in</pre></div>
+<p>➜ <b>Kết luận: DESKTOP-QNBC4UU</b>. Tên dạng <code>DESKTOP-XXXXXXX</code> là tên Windows tự đặt khi cài mới, rất hay gặp ở máy/VM dùng một lần của attacker.</p>
+<p>Tìm mọi dấu vết khác của máy này (pivot theo workstation):</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$all</span> | Where-Object WorkstationName -eq <span class="s">'DESKTOP-QNBC4UU'</span> |
+  Select-Object TimeUTC, Id, LogonType, IpAddress</pre></div>
+<div class="pre"><pre class="out">09:51:45  4624  3  118.69.32.92
+09:51:45  4624  3  203.205.34.107      → cùng một máy attacker, đi qua 2 IP</pre></div>
+</div></div>
+
+<div class="step"><div class="n">4</div><div class="b">
+<h3>Dựng timeline quanh thời điểm breach (thấy quan hệ cha – con)</h3>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$t</span> = <span class="o">$rdp</span>.TimeUTC
+<span class="o">$all</span> | Where-Object { <span class="o">$_</span>.Id -eq 4624 -and <span class="o">$_</span>.TimeUTC -ge <span class="o">$t</span>.AddSeconds(-5) -and <span class="o">$_</span>.TimeUTC -le <span class="o">$t</span>.AddSeconds(2) } |
+  Format-Table RecordId, TargetUserName, LogonType, IpAddress, WorkstationName,
+               ProcessId, ProcessName, SubjectLogonId, TargetLogonId, TargetLinkedLogonId -AutoSize</pre></div>
+<div class="pre"><pre class="out">RecordId TargetUserName LT IpAddress      Workstation      ProcessId ProcessName  SubjectLogonId TargetLogonId TargetLinkedLogonId
+19988802 Administrator  3  118.69.32.92   DESKTOP-QNBC4UU  0x0       -            0x0            0x9c3015c0    0x0
+19988806 Administrator  3  203.205.34.107 DESKTOP-QNBC4UU  0x0       -            0x0            0x9c3016c0    0x0
+19988812 UMFD-3         2  -              -                0xdf0     winlogon.exe 0x3e7          0x9c30244d    0x0
+19988814 DWM-3          2  -              -                0xdf0     winlogon.exe 0x3e7          0x9c302d31    0x9c302d56
+19988815 DWM-3          2  -              -                0xdf0     winlogon.exe 0x3e7          0x9c302d56    0x9c302d31
+19988821 Administrator  10 203.205.34.107 WIN-F89VT9IER10  0x920     svchost.exe  0x3e7          0x9c306841    0x0</pre></div>
+<p>Tìm event "con" của phiên RDP theo Logon ID (với log đầy đủ sẽ ra 4672, 4688, 4634/4647…):</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$lid</span> = <span class="o">$rdp</span>.TargetLogonId
+<span class="o">$all</span> | Where-Object { <span class="o">$_</span>.SubjectLogonId -eq <span class="o">$lid</span> -or <span class="o">$_</span>.TargetLogonId -eq <span class="o">$lid</span> } |
+  Select-Object TimeUTC, Id, RecordId
+
+<span class="c"># Trên máy thật: kiểm tra thêm log TerminalServices</span>
+<span class="c"># Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational'; Id=1149}</span>
+<span class="c"># Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'; Id=21,22,24,25}</span></pre></div>
+<div class="pre"><pre class="out">Chỉ trả về chính 4624 (RecordId 19988821) → file này đã bị lọc, các event con không được export (xem mục 4.5)</pre></div>
+</div></div>
+
+<div class="step"><div class="n">★</div><div class="b">
+<h3>Script gộp: chạy một lần ra cả 3 đáp án</h3>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$log</span>  = <span class="s">"C:\Lab\RDP-Security.evtx"</span>
+<span class="o">$rows</span> = Get-WinEvent -FilterHashtable @{Path=<span class="o">$log</span>; Id=4624,4625} -Oldest | ForEach-Object {
+  <span class="o">$x</span> = [xml]<span class="o">$_</span>.ToXml(); <span class="o">$o</span> = [ordered]@{Time=<span class="o">$_</span>.TimeCreated.ToUniversalTime(); Id=<span class="o">$_</span>.Id}
+  <span class="o">$x</span>.Event.EventData.Data | ForEach-Object { <span class="o">$o</span>[<span class="o">$_</span>.Name] = <span class="o">$_</span>.<span class="s">'#text'</span> }; [pscustomobject]<span class="o">$o</span> }
+
+<span class="o">$victim</span> = <span class="o">$rows</span> | ? { <span class="o">$_</span>.Id -eq 4625 -and <span class="o">$_</span>.SubStatus -eq <span class="s">'0xc000006a'</span> } |
+          Group-Object TargetUserName | Sort-Object Count -Desc | Select-Object -First 1
+<span class="o">$rdp</span>    = <span class="o">$rows</span> | ? { <span class="o">$_</span>.Id -eq 4624 -and <span class="o">$_</span>.LogonType -eq <span class="s">'10'</span> -and <span class="o">$_</span>.IpAddress -ne <span class="s">'-'</span> }
+<span class="o">$nla</span>    = <span class="o">$rows</span> | ? { <span class="o">$_</span>.Id -eq 4624 -and <span class="o">$_</span>.LogonType -eq <span class="s">'3'</span> -and <span class="o">$_</span>.IpAddress -eq <span class="o">$rdp</span>.IpAddress } |
+          Sort-Object Time | Select-Object -Last 1
+
+[pscustomobject]@{
+  BruteForcedUser = <span class="s">"$($victim.Name) ($($victim.Count) lần)"</span>
+  BreachIP        = <span class="o">$rdp</span>.IpAddress
+  BreachTimeUTC   = <span class="o">$rdp</span>.Time
+  AttackerHost    = <span class="o">$nla</span>.WorkstationName
+  RdpLogonId      = <span class="o">$rdp</span>.TargetLogonId
+}</pre></div>
+<div class="pre"><pre class="out">BruteForcedUser : ADMINISTRATOR (1018 lần)
+BreachIP        : 203.205.34.107
+BreachTimeUTC   : 20/05/2025 09:51:48
+AttackerHost    : DESKTOP-QNBC4UU
+RdpLogonId      : 0x9c306841</pre></div>
+</div></div>
+</div>
+
+<!-- ===== Event Viewer ===== -->
+<div class="tabpanel" id="tab-ev">
+
+<div class="step ev"><div class="n">0</div><div class="b">
+<h3>Mở file log đã lưu</h3>
+<ol>
+<li><code>Win + R</code> → gõ <code>eventvwr.msc</code> → Enter.</li>
+<li>Khung phải <b>Actions</b> → <b>Open Saved Log…</b> → chọn <code>C:\Lab\RDP-Security.evtx</code>.</li>
+<li>Hộp thoại hỏi tên hiển thị: giữ mặc định → OK. Log xuất hiện ở <b>Saved Logs</b> (khung trái).</li>
+<li>Khung giữa hiện tiêu đề: <code>Number of events: 1,567</code>.</li>
+</ol>
+<div class="tip">Click tiêu đề cột <b>Date and Time</b> để sắp xếp. Chuột phải tiêu đề cột → <b>Add/Remove Columns…</b> để thêm cột (ví dụ Event Record ID). Event Viewer hiển thị theo <b>giờ máy bạn</b> (VN: 16:51:48 tương ứng 09:51:48 UTC).</div>
+</div></div>
+
+<div class="step ev"><div class="n">1</div><div class="b">
+<h3>Câu 1: Lọc 4625 và tìm user bị brute force</h3>
+<ol>
+<li>Chọn log vừa mở → Actions → <b>Filter Current Log…</b></li>
+<li>Tab <b>Filter</b> → ô <code>&lt;All Event IDs&gt;</code> gõ <b>4625</b> → OK.</li>
+<li>Tiêu đề khung giữa hiện: <code>Filtered: … Event ID: 4625. Number of events: 1,559</code>.</li>
+<li>Click vài event bất kỳ → tab <b>General</b> phía dưới. Đọc các mục sau:</li>
+</ol>
+<div class="fieldmap"><span class="h">An account failed to log on.</span>
+Subject:            Security ID: NULL SID     ← không có ai "đứng sau" (đến từ mạng)
+<span class="h">Logon Type:</span>         <span class="x">3</span>                         ← Network (bước NLA)
+<span class="h">Account For Which Logon Failed:</span>
+    Account Name:   <span class="rr">ADMINISTRATOR</span>             ← TargetUserName  (câu 1)
+<span class="h">Failure Information:</span>
+    Failure Reason: Unknown user name or bad password.
+    Status:         0xC000006D
+    Sub Status:     <span class="rr">0xC000006A</span>                ← mật khẩu sai → user tồn tại
+<span class="h">Network Information:</span>
+    Workstation Name:       -                 ← brute-force tool không gửi tên máy
+    Source Network Address: 110.39.6.180      ← IP dò mật khẩu
+<span class="h">Detailed Authentication Information:</span>
+    Logon Process:  NtLmSsp    Authentication Package: NTLM</div>
+<p><b>Event Viewer không có chức năng "Group by"</b>, nên để đếm theo user ta dùng bộ lọc XML rồi đọc con số <i>Number of events</i>:</p>
+<div class="warn"><b>Đừng dán đè cả khối &lt;QueryList&gt;.</b> Nếu <code>Path</code> trong đoạn dán khác với đường dẫn thật của log đang mở, Event Viewer không biết áp bộ lọc vào log nào và có thể <b>crash</b> ("Snap-in Unavailable – NullReferenceException"). Cách an toàn: giữ nguyên khung XML mà Event Viewer tự tạo, <b>chỉ thay phần chữ nằm giữa</b> <code>&lt;Select Path="..."&gt;</code> và <code>&lt;/Select&gt;</code>. Xem mục "Xử lý khi Event Viewer bị crash" ở cuối tab này.</div>
+<ol>
+<li>Click chọn đúng log ở khung trái (<b>Saved Logs → RDP-Security</b>), <i>không</i> chọn "Event Viewer (Local)".</li>
+<li>Actions → <b>Filter Current Log…</b> → tab <b>Filter</b>: gõ <b>4625</b> vào ô Event IDs (để Event Viewer tự sinh khung XML có Path đúng).</li>
+<li>Sang tab <b>XML</b> → tick <b>Edit query manually</b> → Yes. Bạn sẽ thấy dạng:
+<div class="fieldmap">&lt;QueryList&gt;
+  &lt;Query Id="0" Path="file://<span class="x">D:\...\RDP-Security.evtx</span>"&gt;      ← GIỮ NGUYÊN
+    &lt;Select Path="file://<span class="x">D:\...\RDP-Security.evtx</span>"&gt;<span class="rr">*[System[(EventID=4625)]]</span>&lt;/Select&gt;
+  &lt;/Query&gt;                                                ↑ chỉ thay phần đỏ này
+&lt;/QueryList&gt;</div></li>
+<li>Thay phần đỏ bằng biểu thức dưới (chỉ một dòng XPath), rồi OK:</li>
+</ol>
+<div class="pre"><button class="copy">Copy</button><pre>*[System[(EventID=4625)]] and *[EventData[Data[@Name='TargetUserName']='ADMINISTRATOR']]</pre></div>
+<div class="pre"><pre class="out">Number of events: 1,011   (đổi thành 'Administrator' → 7; 'ADMIN' → 169; 'USER' → 102 …)</pre></div>
+<p>Muốn chỉ thấy các lần "user tồn tại nhưng sai mật khẩu", thay điều kiện bằng <code>Data[@Name='SubStatus']='0xc000006a'</code> → còn 1.031 event, gần như toàn bộ là Administrator (còn lại 13 Guest).</p>
+<p>➜ <b>Administrator</b> là tài khoản bị brute force.</p>
+<div class="tip">Lọc XML so khớp <b>đúng từng ký tự</b> (kể cả hoa/thường, khoảng trắng). Nếu không chắc giá trị, mở 1 event → tab <b>Details → XML View</b> và copy nguyên văn.</div>
+</div></div>
+
+<div class="step ev"><div class="n">2</div><div class="b">
+<h3>Câu 2: Lọc 4624 và tìm phiên RDP (Logon Type 10)</h3>
+<ol>
+<li>Chọn log RDP-Security → Filter Current Log… → tab Filter gõ <b>4624</b> → tab XML → Edit query manually → <b>chỉ thay phần giữa &lt;Select …&gt; và &lt;/Select&gt;</b> bằng:</li>
+</ol>
+<div class="pre"><button class="copy">Copy</button><pre>*[System[(EventID=4624)]] and *[EventData[Data[@Name='LogonType']='10' or Data[@Name='LogonType']='3']]</pre></div>
+<ol start="2">
+<li>Kết quả: 3 event. Click event lúc <b>16:51:48</b> (giờ VN) → tab General:</li>
+</ol>
+<div class="fieldmap"><span class="h">An account was successfully logged on.</span>
+<span class="h">Subject:</span>  Account Name: WIN-F89VT9IER10$   Logon ID: 0x3E7   ← SYSTEM tạo phiên thay cho người dùng
+<span class="h">Logon Information:</span>
+    Logon Type:          <span class="x">10</span>                     ← RemoteInteractive = RDP
+    Restricted Admin Mode: No
+    Elevated Token:      Yes
+<span class="h">New Logon:</span>
+    Security ID:         WIN-F89VT9IER10\Administrator
+    Account Name:        <span class="rr">Administrator</span>
+    Logon ID:            <span class="x">0x9C306841</span>             ← "số vòng tay" của phiên RDP
+    Linked Logon ID:     0x0
+<span class="h">Process Information:</span>
+    Process ID: 0x920    Process Name: C:\Windows\System32\svchost.exe
+<span class="h">Network Information:</span>
+    Workstation Name:       WIN-F89VT9IER10   ← ⚠ tên HOST, không phải attacker
+    Source Network Address: <span class="rr">203.205.34.107</span>    ← IP BREACH (câu 2)
+<span class="h">Detailed Authentication Information:</span>
+    Logon Process: User32   Authentication Package: Negotiate</div>
+<p>➜ <b>203.205.34.107</b> là IP đã vào được host bằng RDP.</p>
+<p>Kiểm chứng IP này có brute force không: Actions → <b>Find…</b> (Ctrl+F) với filter 4625 đang bật, gõ <code>203.205.34.107</code> → <i>không tìm thấy</i>.</p>
+</div></div>
+
+<div class="step ev"><div class="n">3</div><div class="b">
+<h3>Câu 3: Workstation Name của attacker</h3>
+<ol>
+<li>Trong cùng kết quả lọc, click event Type 3 lúc <b>16:51:45</b> có Source Network Address <code>203.205.34.107</code>.</li>
+<li>Đọc <b>Network Information</b>:</li>
+</ol>
+<div class="fieldmap"><span class="h">Logon Information:</span>   Logon Type: <span class="x">3</span>
+<span class="h">New Logon:</span>           Account Name: Administrator   Logon ID: 0x9C3016C0
+<span class="h">Network Information:</span>
+    Workstation Name:       <span class="rr">DESKTOP-QNBC4UU</span>   ← máy attacker (câu 3)
+    Source Network Address: 203.205.34.107
+<span class="h">Detailed Authentication Information:</span>
+    Logon Process: NtLmSsp   Authentication Package: NTLM   Package Name (NTLM only): NTLM V2</div>
+<p>➜ <b>DESKTOP-QNBC4UU</b>. Event Type 3 còn lại (16:51:45, IP <code>118.69.32.92</code>) cũng ghi cùng workstation: cùng một máy attacker.</p>
+<div class="tip">Muốn xem tên trường gốc (TargetUserName, IpAddress, TargetLogonId…) để viết XPath: tab <b>Details</b> → chọn <b>XML View</b>. Friendly View gom nhóm dễ đọc, XML View cho tên chính xác để lọc.</div>
+</div></div>
+
+<div class="step ev"><div class="n">4</div><div class="b">
+<h3>Xem chuỗi event quanh lúc breach</h3>
+<ol>
+<li>Filter Current Log… → <b>Clear</b> → Event IDs: <b>4624</b> → OK (8 event).</li>
+<li>Sắp xếp theo Date and Time, đọc lần lượt các event từ 16:51:45 → 16:51:49 và ghi lại <b>Logon ID</b>, <b>Linked Logon ID</b>, <b>Process ID</b> của từng event, sau đó đối chiếu với sơ đồ ở mục 4.</li>
+<li>Để tìm event con của phiên RDP trên log đầy đủ, dùng XPath theo Logon ID:</li>
+</ol>
+<div class="pre"><button class="copy">Copy</button><pre>*[EventData[Data[@Name='SubjectLogonId']='0x9c306841' or Data[@Name='TargetLogonId']='0x9c306841']]</pre></div>
+<div class="warn">Friendly view hiển thị <code>0x9C306841</code> (chữ HOA), còn trong XML là <code>0x9c306841</code> (chữ thường). Tương tự SubStatus: <code>0xC000006A</code> ↔ <code>0xc000006a</code>. XPath so khớp chuỗi tuyệt đối, nên luôn copy giá trị từ <b>XML View</b>.</div>
+</div></div>
+
+<div class="step ev"><div class="n">!</div><div class="b">
+<h3>Xử lý khi Event Viewer bị crash ("Snap-in Unavailable")</h3>
+<p>Lỗi <code>System.NullReferenceException … EventsNode.ExecuteFilterAction()</code> nghĩa là MMC áp bộ lọc nhưng không tìm thấy log tương ứng. Nguyên nhân thường gặp: <code>Path</code> trong XML không khớp file đang mở, hoặc lúc bấm OK khung trái đang chọn "Event Viewer (Local)" thay vì log. File .evtx của bạn không bị ảnh hưởng.</p>
+<ol>
+<li>Đóng hẳn cửa sổ Event Viewer (File → Exit). Nếu treo: Task Manager → kết thúc <b>Microsoft Management Console (mmc.exe)</b>.</li>
+<li>Mở lại <code>eventvwr.msc</code> → Open Saved Log… → chọn lại file → làm lại bộ lọc theo cách "chỉ thay phần trong &lt;Select&gt;".</li>
+<li>Nếu vừa mở lên đã crash lại (MMC nhớ trạng thái lỗi), xoá cấu hình đã lưu rồi mở lại:
+<div class="pre"><button class="copy">Copy</button><pre><span class="c"># Đóng Event Viewer trước khi chạy</span>
+Remove-Item <span class="s">"$env:APPDATA\Microsoft\MMC\eventvwr"</span> -Force -ErrorAction SilentlyContinue
+<span class="c"># Danh sách Saved Logs đã mở (cần PowerShell Run as Administrator):</span>
+Get-ChildItem <span class="s">"$env:ProgramData\Microsoft\Event Viewer\ExternalLogs"</span></pre></div>
+Nếu trong <code>ExternalLogs</code> có mục trỏ tới RDP-Security gây lỗi, xoá mục đó (hoặc chuột phải log trong Saved Logs → <b>Delete</b>; thao tác này chỉ gỡ khỏi Event Viewer, không xoá file .evtx).</li>
+<li>Cách thay thế không cần sửa XML: tab <b>Filter</b> → ô Event IDs gõ 4624 hoặc 4625, rồi dùng <b>Find…</b> (Ctrl+F) tìm chuỗi như <code>Logon Type:		10</code>, IP hoặc tên user. Còn khi cần đếm/nhóm thì PowerShell nhanh và ổn định hơn.</li>
+</ol>
+</div></div>
+</div>
+
+<!-- ============ 4 ============ -->
+<h2 id="chame">4. Event cha – con: làm sao biết event này "sinh ra" từ event kia?</h2>
+
+<div class="analogy">Windows không có trường "ParentEventID". Quan hệ cha–con được suy ra từ <b>dấu vân tay chung</b>: số vòng tay (Logon ID), cặp vòng tay đôi (Linked Logon ID), người phát vòng tay (Subject / Process), số phòng (Session ID), cùng giờ – cùng IP – cùng người (SID).</div>
+
+<h3>4.1 Sơ đồ chuỗi breach trong file này</h3>
+<div class="chain">
+  <div class="node r"><span class="t">4625 × 1.559</span><span class="tag r">brute force</span><br>
+  <span class="kv">09:10 → 09:59 · 41 IP · LogonType 3 · NTLM · Administrator: SubStatus 0xC000006A</span></div>
+  <div class="arrow">⋮ không có Logon ID chung (thất bại thì không được phát vòng tay) ⋮</div>
+
+  <div class="node y"><span class="t">4624 · Type 3 · RID 19988806</span><span class="tag y">CHA – NLA, "kiểm vé ở cổng"</span><br>
+  <span class="kv">09:51:45.579 · <em>203.205.34.107</em> · Workstation <em>DESKTOP-QNBC4UU</em> · NtLmSsp/NTLM V2 · SID …-500 · LogonId 0x9C3016C0</span></div>
+  <div class="arrow">nối bằng: <b>cùng IP</b> + <b>cùng TargetUserSid (-500)</b> + <b>cách nhau ~2,5 giây</b> (Logon ID khác nhau)</div>
+
+  <div class="indent">
+    <div class="node p"><span class="t">4624 · Type 2 · UMFD-3</span><span class="tag p">dựng Session 3</span><br>
+    <span class="kv">09:51:47.530 · ProcessName winlogon.exe · <em>ProcessId 0xDF0</em> · SubjectLogonId 0x3E7 (SYSTEM)</span></div>
+    <div class="arrow">cùng <b>ProcessId 0xDF0</b> · cùng hậu tố <b>-3</b> = Session ID 3</div>
+    <div class="node p"><span class="t">4624 · Type 2 · DWM-3 (×2)</span><span class="tag p">cặp anh em</span><br>
+    <span class="kv">LogonId <em>0x9C302D31</em> ↔ TargetLinkedLogonId <em>0x9C302D56</em> (và ngược lại) = 1 token elevated + 1 token thường</span></div>
+    <div class="arrow">winlogon dựng xong màn hình cho Session 3 → mở cửa phòng</div>
+  </div>
+
+  <div class="node g"><span class="t">4624 · Type 10 · RID 19988821</span><span class="tag g">PHIÊN RDP – breach</span><br>
+  <span class="kv">09:51:48.117 · Administrator · <em>203.205.34.107</em> · Workstation WIN-F89VT9IER10 (⚠ tên host) · svchost.exe 0x920 · User32 · <em>LogonId 0x9C306841</em></span></div>
+  <div class="arrow">mọi event sau đó có <b>SubjectLogonId = 0x9C306841</b> là "con"</div>
+
+  <div class="indent">
+    <div class="node x"><span class="t">4672</span> Special privileges · SubjectLogonId 0x9C306841 <span class="tag p">dự kiến – đã bị lọc khỏi file</span></div>
+    <div class="arrow"></div>
+    <div class="node x"><span class="t">4688 / 4698 / 4720 / 4732…</span> attacker chạy lệnh, tạo task, tạo user · SubjectLogonId 0x9C306841 <span class="tag p">dự kiến</span></div>
+    <div class="arrow"></div>
+    <div class="node x"><span class="t">4779 / 4647 / 4634</span> ngắt / logoff · TargetLogonId 0x9C306841 <span class="tag p">dự kiến</span></div>
+  </div>
+
+  <div class="arrow" style="margin-top:12px">— song song, không liên quan —</div>
+  <div class="node"><span class="t">4624 · Type 5 · SYSTEM (×2)</span> 09:51:48–49 · services.exe · nhiễu nền do dịch vụ khởi động, <b>không</b> phải con của phiên RDP (TargetLogonId 0x3E7 là logon cố định của SYSTEM)</div>
+</div>
+
+<h3>4.2 Năm "sợi dây" nối event cha – con</h3>
+<table>
+<tr><th>#</th><th>Sợi dây</th><th>Ở event cha</th><th>Ở event con</th><th>Ví dụ trong file</th></tr>
+<tr class="hl"><td>1</td><td><b>Logon ID</b> (mạnh nhất)</td><td>4624 → <code>TargetLogonId</code></td><td>4672, 4688, 4663… → <code>SubjectLogonId</code><br>4634, 4647 → <code>TargetLogonId</code></td><td>Phiên RDP = <code>0x9C306841</code></td></tr>
+<tr><td>2</td><td><b>Linked Logon ID</b></td><td>4624 token A → <code>TargetLinkedLogonId</code> = B</td><td>4624 token B → <code>TargetLinkedLogonId</code> = A</td><td>DWM-3: 0x9C302D31 ↔ 0x9C302D56</td></tr>
+<tr><td>3</td><td><b>Người tạo</b> (Subject / Process)</td><td>Logon của tiến trình/tài khoản tạo ra</td><td>4624 → <code>SubjectLogonId</code>, <code>ProcessId</code>, <code>ProcessName</code></td><td>0x3E7 = SYSTEM; winlogon 0xDF0 sinh UMFD-3, DWM-3; svchost 0x920 sinh Type 10</td></tr>
+<tr><td>4</td><td><b>Session ID</b></td><td>Tên UMFD-<i>n</i> / DWM-<i>n</i></td><td>TerminalServices-LocalSessionManager 21/22/24/25 → "Session ID: <i>n</i>"</td><td>Session 3</td></tr>
+<tr><td>5</td><td><b>Thời gian + IP + SID</b> (khi không có ID chung)</td><td>4624 Type 3 NLA</td><td>4624 Type 10 vài giây sau</td><td>Cùng 203.205.34.107, cùng SID -500, cách 2,5 s</td></tr>
+</table>
+
+<h3>4.3 Đọc SubjectLogonId để biết "ai đứng sau"</h3>
+<table>
+<tr><th>Giá trị SubjectLogonId trong 4624</th><th>Ý nghĩa</th></tr>
+<tr><td><code>0x0</code> + SID <code>S-1-0-0</code> (NULL SID)</td><td>Yêu cầu đến từ <b>mạng</b>, chưa có ai trên máy đứng sau: đúng với NLA (Type 3) và mọi 4625 brute force</td></tr>
+<tr><td><code>0x3E7</code> (SYSTEM)</td><td>Máy tự tạo logon thay cho người dùng: winlogon / dịch vụ RDP tạo Type 2 (UMFD, DWM) và Type 10</td></tr>
+<tr><td>Một Logon ID của user</td><td>User đó chủ động tạo logon mới (runas, đi tiếp sang máy khác…) → dấu hiệu <b>lateral movement</b></td></tr>
+</table>
+
+<h3>4.4 Vì sao NLA (Type 3) và RDP (Type 10) không chung Logon ID?</h3>
+<div class="analogy">Ở cổng, bảo vệ phát cho bạn một <b>vé tạm</b> (Logon ID 0x9C3016C0) chỉ để xác nhận bạn là ai. Vào tới phòng, lễ tân phát <b>vòng tay chính thức</b> (0x9C306841). Hai giấy tờ khác số, nhưng cùng tên người, cùng biển số xe (IP), cách nhau vài giây. Vì vậy ta nối chúng bằng sợi dây #5 (thời gian + IP + SID).</div>
+
+<h3>4.5 Bonus: EventRecordID cho biết log có bị lọc/xoá không</h3>
+<p><code>EventRecordID</code> là số thứ tự tăng dần, không bao giờ nhảy cóc trên log gốc. Trong file này:</p>
+<div class="pre"><button class="copy">Copy</button><pre><span class="o">$ids</span> = <span class="o">$all</span>.RecordId | Sort-Object
+<span class="o">$gaps</span> = <span class="k">for</span> (<span class="o">$i</span>=1; <span class="o">$i</span> -lt <span class="o">$ids</span>.Count; <span class="o">$i</span>++) { <span class="k">if</span> (<span class="o">$ids</span>[<span class="o">$i</span>] - <span class="o">$ids</span>[<span class="o">$i</span>-1] -gt 1) { (<span class="o">$ids</span>[<span class="o">$i</span>-1]+1)..(<span class="o">$ids</span>[<span class="o">$i</span>]-1) } }
+<span class="o">$gaps</span></pre></div>
+<div class="pre"><pre class="out">24 RecordId bị thiếu, dồn quanh lúc breach:
+19988800 19988801 19988803 19988804 19988805 19988808 19988809 19988811 19988813
+19988816 … 19988820 19988822 19988824 19988826 19988827 19988829</pre></div>
+<p>Các lỗ hổng nằm sát ngay sau từng 4624, đúng vị trí của 4672 / 4648 / 4634 thường đi kèm. Kết luận: file đã được <b>export có lọc</b> chỉ giữ 4624 + 4625. Trên hệ thống thật, lỗ hổng RecordId kèm <b>1102</b> (audit log cleared) là dấu hiệu attacker xoá dấu vết.</p>
+
+<!-- ============ 5 ============ -->
+<h2 id="bay">5. Bẫy thường gặp</h2>
+<div class="warn"><b>Lấy WorkstationName từ event Type 10.</b> Với RDP qua NLA, trường này ghi tên <i>chính host</i> (WIN-F89VT9IER10). Tên máy attacker nằm ở Type 3 (NLA) ngay trước đó, hoặc ở 4778 (Client Name) / log RemoteConnectionManager.</div>
+<div class="warn"><b>Lấy WorkstationName từ 4625.</b> Công cụ brute force (Hydra, crowbar, ncrack…) thường không gửi tên máy, nên giá trị là "-" ở cả 1.559 event.</div>
+<div class="warn"><b>Coi IP brute force nhiều nhất là IP breach.</b> 110.39.6.180 dò 257 lần nhưng không vào được. IP breach phải đi ra từ 4624.</div>
+<div class="warn"><b>Đếm phân biệt hoa/thường.</b> "ADMINISTRATOR" (1011) và "Administrator" (7) là cùng tài khoản (Windows không phân biệt). Ngoài ra còn "ADMINISTRATOR " có dấu cách ở cuối (3 lần, SubStatus 0xC0000064).</div>
+<div class="warn"><b>Lệch múi giờ.</b> Event Viewer & PowerShell hiển thị giờ máy bạn (16:51 VN). Báo cáo / đáp án lab thường dùng UTC (09:51).</div>
+<div class="warn"><b>Bỏ qua SubStatus.</b> Nhiều thất bại với user không tồn tại (0xC0000064) chỉ là dò tên. Mục tiêu thật là tài khoản có 0xC000006A.</div>
+
+<!-- ============ 6 ============ -->
+<h2 id="cheat">6. Cheat sheet</h2>
+<div class="grid2">
+<div>
+<h3>Top user bị thử (4625)</h3>
+<div class="bar"><span class="nm">ADMINISTRATOR*</span><span class="tr"><span class="fl" style="width:100%"></span></span><span class="ct">1018</span></div>
+<div class="bar"><span class="nm">ADMIN</span><span class="tr"><span class="fl" style="width:16.6%"></span></span><span class="ct">169</span></div>
+<div class="bar"><span class="nm">USER</span><span class="tr"><span class="fl" style="width:10%"></span></span><span class="ct">102</span></div>
+<div class="bar"><span class="nm">USER1</span><span class="tr"><span class="fl" style="width:6.8%"></span></span><span class="ct">69</span></div>
+<div class="bar"><span class="nm">TEST</span><span class="tr"><span class="fl" style="width:6.7%"></span></span><span class="ct">68</span></div>
+<div class="bar"><span class="nm">USER2</span><span class="tr"><span class="fl" style="width:6.4%"></span></span><span class="ct">65</span></div>
+<p class="muted" style="font-size:12px">* gộp hoa/thường</p>
+</div>
+<div>
+<h3>Top IP dò mật khẩu (4625)</h3>
+<div class="bar"><span class="nm">110.39.6.180</span><span class="tr"><span class="fl b" style="width:100%"></span></span><span class="ct">257</span></div>
+<div class="bar"><span class="nm">41.231.229.76</span><span class="tr"><span class="fl b" style="width:75.9%"></span></span><span class="ct">195</span></div>
+<div class="bar"><span class="nm">172.232.4.244</span><span class="tr"><span class="fl b" style="width:46.3%"></span></span><span class="ct">119</span></div>
+<div class="bar"><span class="nm">157.66.47.222</span><span class="tr"><span class="fl b" style="width:35.8%"></span></span><span class="ct">92</span></div>
+<div class="bar"><span class="nm">102.88.21.218</span><span class="tr"><span class="fl b" style="width:33.9%"></span></span><span class="ct">87</span></div>
+<div class="bar"><span class="nm">157.230.246.250</span><span class="tr"><span class="fl b" style="width:31.9%"></span></span><span class="ct">82</span></div>
+<p class="muted" style="font-size:12px">Tổng 41 IP, không IP nào đăng nhập thành công</p>
+</div>
+</div>
+
+<table>
+<tr><th>Mục tiêu</th><th>PowerShell</th><th>Event Viewer (XPath trong tab XML)</th></tr>
+<tr><td>Brute force</td><td><code>-FilterHashtable @{Path=$log;Id=4625}</code> → <code>Group-Object TargetUserName,SubStatus</code></td><td><code>*[System[(EventID=4625)]]</code></td></tr>
+<tr><td>Phiên RDP</td><td><code>-FilterXPath "*[System[EventID=4624] and EventData[Data[@Name='LogonType']='10']]"</code></td><td>như cột trái</td></tr>
+<tr><td>Máy attacker</td><td>4624 Type 3 cùng IP, ngay trước Type 10 → <code>WorkstationName</code></td><td><code>…Data[@Name='IpAddress']='203.205.34.107'</code></td></tr>
+<tr><td>Event con</td><td><code>? {$_.SubjectLogonId -eq $lid -or $_.TargetLogonId -eq $lid}</code></td><td><code>*[EventData[Data[@Name='SubjectLogonId']='0x…']]</code></td></tr>
+<tr><td>Log bị lọc/xoá?</td><td>Tìm lỗ hổng <code>RecordId</code>; tìm ID 1102</td><td>Thêm cột Event Record ID, nhìn số nhảy cóc</td></tr>
+</table>
+
+<h3>Khuyến nghị xử lý sự cố (nếu đây là hệ thống thật)</h3>
+<ul>
+<li>Cô lập host; đổi mật khẩu Administrator; đổi tên / vô hiệu hoá tài khoản RID 500 built-in.</li>
+<li>Chặn 203.205.34.107, 118.69.32.92 và 41 IP brute force; không để lộ 3389 ra Internet (đặt sau VPN / RD Gateway + MFA).</li>
+<li>Bật Account Lockout Policy; bật audit 4688 (kèm command line) để thấy attacker làm gì sau khi vào.</li>
+<li>Thu thập thêm: log TerminalServices (1149, 21, 22, 24, 25), RdpCoreTS (131), các event con theo Logon ID 0x9C306841.</li>
+</ul>
+
+<footer>Tài liệu tạo từ việc phân tích trực tiếp RDP-Security.evtx (1.567 event: 1.559 × 4625, 8 × 4624). Mọi kết quả mẫu trong khung "Kết quả với file này" khớp với dữ liệu trong file; định dạng ngày giờ trên máy bạn có thể khác tuỳ thiết lập vùng.</footer>
+</div>
+
+<script>
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.tabpanel').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); document.getElementById('tab-'+b.dataset.t).classList.add('on');
+}));
+document.querySelectorAll('.copy').forEach(btn=>btn.addEventListener('click',()=>{
+  const txt=btn.parentElement.querySelector('pre').innerText;
+  const done=()=>{btn.textContent='Đã copy';setTimeout(()=>btn.textContent='Copy',1200)};
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(done).catch(()=>{fallback(txt);done()})}else{fallback(txt);done()}
+}));
+function fallback(t){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}a.remove()}
+</script>
+</body>
+</html>

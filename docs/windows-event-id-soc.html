@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Windows Event ID cho SOC</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Bố cục: thanh tìm kiếm + bộ lọc nguồn log → bảng Event ID → bảng phụ (Logon Type, mã lỗi 4625, đường dẫn log) */
+  --bg:#eef1f4; --surface:#ffffff; --ink:#17202b; --muted:#5a6573; --line:#d4dae1; --code-bg:#f4f6f8;
+  --accent:#2155a3; --accent-ink:#ffffff; --star:#b7791f;
+  --s-sec:#2155a3; --s-sys:#5b6470; --s-smon:#7a3fb0; --s-ps:#0f6b6b; --s-rdp:#b5560f; --s-def:#b4232b; --s-task:#2c7a4b; --s-other:#8a6d1a;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1318; --surface:#161d24; --ink:#e2e8ee; --muted:#8f9bab; --line:#29333d; --code-bg:#10161c;
+    --accent:#7aa8ee; --accent-ink:#0b1626; --star:#e7b04f;
+    --s-sec:#7aa8ee; --s-sys:#9aa5b1; --s-smon:#b99af0; --s-ps:#4fc1bd; --s-rdp:#f09a5a; --s-def:#f07178; --s-task:#6cc98f; --s-other:#d9bd6a;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1318; --surface:#161d24; --ink:#e2e8ee; --muted:#8f9bab; --line:#29333d; --code-bg:#10161c;
+  --accent:#7aa8ee; --accent-ink:#0b1626; --star:#e7b04f;
+  --s-sec:#7aa8ee; --s-sys:#9aa5b1; --s-smon:#b99af0; --s-ps:#4fc1bd; --s-rdp:#f09a5a; --s-def:#f07178; --s-task:#6cc98f; --s-other:#d9bd6a;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans)}
+.wrap{max-width:1280px;margin:0 auto;padding:22px 18px 60px;display:grid;gap:18px}
+header h1{font:700 25px/1.2 var(--sans);margin:0;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:75ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:grid;gap:12px;min-width:0}
+h2{font:600 17px var(--sans);margin:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+h2 small{font:400 13px var(--sans);color:var(--muted)}
+.controls{display:grid;gap:10px;position:sticky;top:0;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+input[type="search"]{width:100%;font:15px var(--sans);background:var(--code-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{font:500 13px var(--sans);border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:5px 12px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:currentColor}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip:hover{border-color:var(--accent)}
+.chip:focus-visible,input:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.count{font-size:13px;color:var(--muted)}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+th{font-size:12px;font-weight:600;color:var(--muted);background:var(--code-bg)}
+tr:last-child td{border-bottom:none}
+td.id{width:1%;white-space:nowrap}
+.idbtn{font:600 17px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);background:none;border:none;padding:0;cursor:pointer;text-align:left}
+.idbtn:hover{color:var(--accent);text-decoration:underline}
+.star{color:var(--star);font-size:13px;margin-left:4px}
+.src{display:inline-block;margin-top:4px;font:500 11.5px var(--mono);padding:1px 7px;border-radius:4px;border:1px solid currentColor;white-space:nowrap}
+.s-sec{color:var(--s-sec)}.s-sys{color:var(--s-sys)}.s-smon{color:var(--s-smon)}.s-ps{color:var(--s-ps)}.s-rdp{color:var(--s-rdp)}.s-def{color:var(--s-def)}.s-task{color:var(--s-task)}.s-other{color:var(--s-other)}
+td.name b{display:block;font-weight:600}
+td.name span{color:var(--muted);font-size:13px}
+td.fields{font:12.5px/1.6 var(--mono);color:var(--muted);min-width:180px}
+td.note{font-size:13.5px;min-width:200px}
+.def{display:inline-block;font:500 11.5px var(--sans);padding:1px 7px;border-radius:999px;margin-top:4px}
+.d-on{background:color-mix(in srgb,var(--s-task) 16%,transparent);color:var(--s-task)}
+.d-off{background:color-mix(in srgb,var(--s-def) 14%,transparent);color:var(--s-def)}
+.d-ext{background:color-mix(in srgb,var(--s-smon) 16%,transparent);color:var(--s-smon)}
+code{font-family:var(--mono);font-size:.9em;background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:0 4px}
+mark{background:color-mix(in srgb,var(--star) 30%,transparent);color:inherit;border-radius:2px}
+.empty{padding:16px;color:var(--muted)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:18px;align-items:start}
+.mini td,.mini th{padding:7px 10px;font-size:13.5px}
+.mini td:first-child{font-family:var(--mono);white-space:nowrap;font-weight:500}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--surface);font-size:13.5px;padding:8px 14px;border-radius:8px;opacity:0;pointer-events:none;max-width:calc(100% - 32px)}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:no-preference){.toast{transition:opacity .2s}}
+@media (max-width:720px){td.fields{display:none}th.fields{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Windows Event ID cho SOC</h1>
+    <p>Bảng tra cứu nhanh các Event ID hay dùng khi triage và điều tra trên Windows. Bấm vào số Event ID để copy lệnh PowerShell lọc đúng event đó. ★ là những event nên thuộc lòng.</p>
+  </header>
+
+  <div class="controls">
+    <input type="search" id="q" placeholder="Tìm theo số ID, tên, trường, mô tả… ví dụ: 4625, rdp, lsass, xóa log, tạo tài khoản" aria-label="Tìm Event ID">
+    <div class="row" id="srcChips"></div>
+    <div class="row">
+      <button type="button" class="chip" id="starOnly" aria-pressed="false">★ Chỉ event quan trọng</button>
+      <span class="count" id="count" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Event ID</th><th>Tên và ý nghĩa với SOC</th><th class="fields">Trường cần xem</th><th>Lưu ý / dấu hiệu đáng ngờ</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="grid3">
+    <section class="card" aria-labelledby="h-lt">
+      <h2 id="h-lt">Logon Type <small>trong 4624, 4625</small></h2>
+      <table class="mini"><tbody>
+        <tr><td>2</td><td>Interactive: đăng nhập tại chỗ, ngồi trước máy</td></tr>
+        <tr><td>3</td><td>Network: truy cập qua mạng (share SMB, và RDP khi bật NLA)</td></tr>
+        <tr><td>4</td><td>Batch: scheduled task chạy</td></tr>
+        <tr><td>5</td><td>Service: dịch vụ khởi động bằng tài khoản dịch vụ</td></tr>
+        <tr><td>7</td><td>Unlock: mở khóa màn hình</td></tr>
+        <tr><td>8</td><td>NetworkCleartext: mật khẩu gửi dạng rõ (IIS Basic Auth)</td></tr>
+        <tr><td>9</td><td>NewCredentials: <code>runas /netonly</code>, hay gặp trong lateral movement</td></tr>
+        <tr><td>10</td><td>RemoteInteractive: Remote Desktop (RDP)</td></tr>
+        <tr><td>11</td><td>CachedInteractive: đăng nhập bằng thông tin lưu đệm khi không kết nối domain</td></tr>
+      </tbody></table>
+    </section>
+    <section class="card" aria-labelledby="h-st">
+      <h2 id="h-st">Mã lỗi 4625 <small>trường Status / Sub Status</small></h2>
+      <table class="mini"><tbody>
+        <tr><td>0xC000006A</td><td>User đúng, <b>sai mật khẩu</b>: dấu hiệu brute force</td></tr>
+        <tr><td>0xC0000064</td><td><b>User không tồn tại</b>: dấu hiệu password spraying, dò tên user</td></tr>
+        <tr><td>0xC000006D</td><td>Lỗi chung, xem Sub Status để biết chi tiết</td></tr>
+        <tr><td>0xC0000234</td><td>Tài khoản <b>đang bị khóa</b></td></tr>
+        <tr><td>0xC0000072</td><td>Tài khoản <b>bị vô hiệu hóa</b></td></tr>
+        <tr><td>0xC000006F</td><td>Đăng nhập ngoài giờ cho phép</td></tr>
+        <tr><td>0xC0000070</td><td>Đăng nhập từ máy không được phép</td></tr>
+        <tr><td>0xC0000071</td><td>Mật khẩu đã hết hạn</td></tr>
+        <tr><td>0xC0000193</td><td>Tài khoản đã hết hạn</td></tr>
+        <tr><td>0xC0000133</td><td>Lệch giờ giữa máy và domain controller</td></tr>
+        <tr><td>0xC000015B</td><td>User không được cấp loại đăng nhập này (ví dụ không có quyền RDP)</td></tr>
+      </tbody></table>
+    </section>
+    <section class="card" aria-labelledby="h-path">
+      <h2 id="h-path">Log nằm ở đâu trong Event Viewer</h2>
+      <table class="mini"><tbody>
+        <tr><td>Security</td><td>Windows Logs → Security</td></tr>
+        <tr><td>System</td><td>Windows Logs → System</td></tr>
+        <tr><td>Sysmon</td><td>Applications and Services Logs → Microsoft → Windows → Sysmon → Operational</td></tr>
+        <tr><td>PowerShell</td><td>… → Microsoft → Windows → PowerShell → Operational</td></tr>
+        <tr><td>RDP</td><td>… → TerminalServices-RemoteConnectionManager / LocalSessionManager → Operational</td></tr>
+        <tr><td>Defender</td><td>… → Windows Defender → Operational</td></tr>
+        <tr><td>Task Scheduler</td><td>… → TaskScheduler → Operational</td></tr>
+      </tbody></table>
+      <p class="count">File log gốc (.evtx) nằm trong <code>C:\Windows\System32\winevt\Logs\</code>.</p>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const SRC = {
+  sec:  {n:'Security', log:'Security', d:'Windows Logs → Security'},
+  sys:  {n:'System', log:'System'},
+  smon: {n:'Sysmon', log:'Microsoft-Windows-Sysmon/Operational'},
+  ps:   {n:'PowerShell', log:'Microsoft-Windows-PowerShell/Operational'},
+  rdp:  {n:'RDP', log:'Microsoft-Windows-TerminalServices-RemoteConnectionManager/Operational'},
+  def:  {n:'Defender', log:'Microsoft-Windows-Windows Defender/Operational'},
+  task: {n:'Task Scheduler', log:'Microsoft-Windows-TaskScheduler/Operational'},
+  other:{n:'Khác', log:''}
+};
+// [id, nguồn, tên, ý nghĩa SOC, trường cần xem, lưu ý, mặc định: on|off|ext, quan trọng, log riêng nếu khác SRC]
+const E = [
+ // ---------- Security: đăng nhập ----------
+ [4624,'sec','Đăng nhập thành công','Xác định ai đã vào máy, từ đâu, bằng cách nào. Điểm khởi đầu để dựng dòng thời gian tấn công.','New Logon › Account Name, Logon ID, Logon Type, Source Network Address, Workstation Name','Rất nhiều nhiễu từ SYSTEM và dịch vụ. Đọc phần New Logon, không phải Subject. RDP có NLA: một event type 3 rồi đến type 10; tên máy thật nằm ở event type 3.','on',1],
+ [4625,'sec','Đăng nhập thất bại','Phát hiện brute force, password spraying, quét lỗ hổng.','Account Name, Logon Type, Status, Sub Status, Source Network Address, Workstation Name','Nhiều user khác nhau thất bại = spraying. Một user thất bại nhiều lần = brute force. Workstation lạ như "kali". Xem mã lỗi ở bảng bên dưới.','on',1],
+ [4634,'sec','Phiên đăng nhập kết thúc','Biết phiên kéo dài bao lâu (ghép với 4624 qua Logon ID).','Logon ID, Logon Type','Có thể ghi trễ hoặc không ghi; đừng dựa vào nó để kết luận người dùng đã rời đi.','on',0],
+ [4647,'sec','Người dùng chủ động đăng xuất','Phân biệt đăng xuất do người dùng với phiên bị ngắt.','Account Name, Logon ID','Chỉ có với đăng nhập tương tác (type 2, 10).','on',0],
+ [4648,'sec','Đăng nhập bằng thông tin xác thực tường minh','Ai đó dùng tài khoản khác để chạy lệnh hoặc kết nối máy khác (runas, PsExec, lateral movement).','Subject Account, Account Whose Credentials Were Used, Target Server Name, Process Name','Bình thường với một số dịch vụ. Đáng ngờ khi user thường dùng tài khoản admin để kết nối nhiều máy.','on',1],
+ [4672,'sec','Phiên được cấp đặc quyền đặc biệt','Đánh dấu đăng nhập bằng tài khoản có quyền admin. Đi ngay sau 4624.','Account Name, Logon ID, Privileges','Tài khoản thường mà có 4672 là dấu hiệu leo thang đặc quyền.','on',1],
+ [4776,'sec','Kiểm tra thông tin xác thực NTLM','Theo dõi xác thực NTLM, phát hiện brute force và pass-the-hash.','Logon Account, Source Workstation, Error Code','Ghi trên domain controller hoặc máy giữ tài khoản local. Error 0xC000006A = sai mật khẩu.','on',0],
+ [4768,'sec','Yêu cầu Kerberos TGT','Theo dõi đăng nhập domain; phát hiện AS-REP roasting.','Account Name, Client Address, Result Code, Pre-Authentication Type','Chỉ có trên domain controller. Pre-Auth Type 0 = tài khoản không yêu cầu pre-auth (dễ bị AS-REP roasting).','on',0],
+ [4769,'sec','Yêu cầu Kerberos service ticket (TGS)','Phát hiện Kerberoasting.','Account Name, Service Name, Ticket Encryption Type, Client Address','Một user xin rất nhiều ticket với Encryption Type 0x17 (RC4) trong thời gian ngắn là dấu hiệu Kerberoasting.','on',1],
+ [4771,'sec','Kerberos pre-authentication thất bại','Brute force trên môi trường domain.','Account Name, Client Address, Failure Code','Failure Code 0x18 = sai mật khẩu.','on',0],
+ [4778,'sec','Kết nối lại phiên (RDP/Fast User Switching)','Theo dõi phiên RDP được nối lại.','Account Name, Session Name, Client Name, Client Address','Ghép với 4779 để biết phiên RDP bị ngắt và nối lại khi nào.','on',0],
+ [4779,'sec','Ngắt kết nối phiên','Phiên RDP bị ngắt nhưng chưa đăng xuất.','Account Name, Client Name, Client Address','','on',0],
+ // ---------- Security: tiến trình, dịch vụ, task ----------
+ [4688,'sec','Tạo tiến trình mới','Biết chương trình nào được chạy, bởi ai, từ tiến trình cha nào.','New Process Name, Process Command Line, Creator Process Name, Account Name, Logon ID','Mặc định tắt. Dòng lệnh cần bật thêm qua GPO "Include command line in process creation events". Nếu cài được Sysmon thì dùng Sysmon Event 1.','off',1],
+ [4689,'sec','Tiến trình kết thúc','Biết tiến trình chạy trong bao lâu.','Process Name, Process ID, Exit Status','Mặc định tắt.','off',0],
+ [4697,'sec','Một dịch vụ được cài đặt','Phát hiện persistence và PsExec.','Service Name, Service File Name, Service Type, Account','Đường dẫn dịch vụ nằm trong Temp, Users\\Public, hoặc chứa powershell/cmd là đáng ngờ. Bản System log tương ứng là 7045.','off',1],
+ [4698,'sec','Scheduled task được tạo','Persistence: kẻ tấn công tạo task để malware tự chạy lại.','Task Name, Task Content (XML: Command, Arguments), Account Name','Mặc định tắt (cần bật audit Other Object Access). Xem phần Command trong XML.','off',1],
+ [4699,'sec','Scheduled task bị xóa','Kẻ tấn công dọn dấu vết.','Task Name, Account Name','','off',0],
+ [4702,'sec','Scheduled task bị sửa','Task hợp lệ bị chỉnh để chạy lệnh độc hại.','Task Name, Task New Content','','off',0],
+ // ---------- Security: tài khoản và nhóm ----------
+ [4720,'sec','Tạo tài khoản người dùng','Persistence: kẻ tấn công tạo tài khoản backdoor.','Subject (ai tạo), New Account Name','Tài khoản tạo ngoài giờ hoặc tên giống tài khoản hệ thống là đáng ngờ.','on',1],
+ [4722,'sec','Tài khoản được kích hoạt','Tài khoản cũ hoặc Guest bị bật lại.','Target Account, Subject','','on',0],
+ [4723,'sec','Người dùng tự đổi mật khẩu','','Target Account, Subject','','on',0],
+ [4724,'sec','Đặt lại mật khẩu của tài khoản khác','Kẻ có quyền admin chiếm tài khoản người khác.','Target Account, Subject','Subject khác Target: một người đặt lại mật khẩu cho người khác.','on',1],
+ [4725,'sec','Tài khoản bị vô hiệu hóa','','Target Account, Subject','','on',0],
+ [4726,'sec','Tài khoản bị xóa','Dọn dấu vết sau khi dùng tài khoản backdoor.','Target Account, Subject','','on',0],
+ [4738,'sec','Thuộc tính tài khoản bị thay đổi','Ví dụ: đặt "mật khẩu không bao giờ hết hạn", bỏ yêu cầu pre-auth.','Target Account, Changed Attributes','','on',0],
+ [4740,'sec','Tài khoản bị khóa','Hậu quả thường thấy của brute force.','Target Account, Caller Computer Name','Caller Computer Name cho biết máy gửi các lần thử sai.','on',1],
+ [4767,'sec','Tài khoản được mở khóa','','Target Account, Subject','','on',0],
+ [4728,'sec','Thêm thành viên vào nhóm bảo mật global','Ví dụ: thêm vào Domain Admins.','Member, Group Name, Subject','Thêm vào nhóm đặc quyền là sự kiện cần kiểm tra ngay.','on',1],
+ [4732,'sec','Thêm thành viên vào nhóm local','Ví dụ: thêm vào Administrators hoặc Remote Desktop Users.','Member (SID), Group Name, Subject','Rất hay gặp sau khi kẻ tấn công tạo tài khoản (4720 rồi 4732).','on',1],
+ [4756,'sec','Thêm thành viên vào nhóm universal','Ví dụ: Enterprise Admins.','Member, Group Name, Subject','','on',0],
+ [4798,'sec','Liệt kê nhóm local của một user','Kẻ tấn công trinh sát quyền của tài khoản.','Target Account, Process Name','Nhiều 4798/4799 liên tiếp từ cmd, powershell, net.exe là dấu hiệu trinh sát.','on',0],
+ [4799,'sec','Liệt kê thành viên nhóm local','Trinh sát: ai là admin trên máy này.','Group Name, Process Name','','on',0],
+ // ---------- Security: log, chính sách, truy cập ----------
+ [1102,'sec','Security log bị xóa','Kẻ tấn công xóa dấu vết.','Subject Account Name','Luôn được ghi, kể cả khi log bị xóa. Gần như luôn đáng điều tra.','on',1],
+ [4719,'sec','Chính sách audit bị thay đổi','Kẻ tấn công tắt ghi log trước khi hành động.','Subject, Category, Changes','','on',1],
+ [4657,'sec','Giá trị registry bị sửa','Persistence qua khóa Run, đổi cấu hình bảo mật.','Object Name, Old Value, New Value, Process Name','Chỉ ghi với khóa đã đặt SACL. Sysmon 13 dễ dùng hơn.','off',0],
+ [4663,'sec','Truy cập đối tượng (file, registry)','Ai đã đọc hoặc sửa file nhạy cảm.','Object Name, Accesses, Process Name, Account Name','Chỉ ghi với file đã đặt SACL; rất nhiều nhiễu nếu đặt rộng.','off',0],
+ [5140,'sec','Truy cập thư mục chia sẻ mạng','Lateral movement qua SMB, ví dụ truy cập ADMIN$ hoặc C$.','Share Name, Source Address, Account Name','Truy cập ADMIN$, C$, IPC$ từ máy trạm là đáng ngờ.','off',1],
+ [5145,'sec','Kiểm tra quyền truy cập file trên share','Biết chính xác file nào trên share bị truy cập.','Share Name, Relative Target Name, Source Address','Rất nhiều nhiễu.','off',0],
+ [5156,'sec','Windows Filtering Platform cho phép kết nối','Kết nối mạng ra vào ở mức host.','Application Name, Source/Destination Address, Port, Direction','Rất nhiều nhiễu. Sysmon 3 thường dễ dùng hơn.','off',0],
+ // ---------- System ----------
+ [7045,'sys','Dịch vụ mới được cài đặt','Phát hiện PsExec, malware cài dạng dịch vụ để chạy với quyền SYSTEM.','Service Name, Image Path, Service Type, Start Type, Account','Tên dịch vụ ngẫu nhiên, Image Path chứa cmd /c, powershell -enc, hoặc nằm trong Temp là đáng ngờ. PsExec tạo dịch vụ PSEXESVC.','on',1],
+ [7036,'sys','Dịch vụ chuyển trạng thái (chạy/dừng)','Kẻ tấn công dừng antivirus, backup, hoặc dịch vụ log.','Service Name, State','Rất nhiều nhiễu; lọc theo tên dịch vụ bảo mật.','on',0],
+ [7040,'sys','Đổi kiểu khởi động của dịch vụ','Ví dụ: chuyển Defender hoặc dịch vụ log sang Disabled.','Service Name, Old/New Start Type','','on',0],
+ [104,'sys','System log bị xóa','Tương tự 1102 nhưng cho System log.','Subject Account Name, Channel','','on',1],
+ [6005,'sys','Event Log service khởi động','Đánh dấu thời điểm máy khởi động.','','Dùng để biết máy bị khởi động lại lúc nào.','on',0],
+ [6006,'sys','Event Log service dừng','Máy tắt bình thường.','','','on',0],
+ [6008,'sys','Máy tắt đột ngột','Mất điện, treo máy, hoặc bị tắt cưỡng bức.','Thời điểm tắt trước đó','','on',0],
+ // ---------- Sysmon ----------
+ [1,'smon','Tạo tiến trình','Log quan trọng nhất của SOC: chương trình nào chạy, dòng lệnh, tiến trình cha, hash.','Image, CommandLine, ParentImage, ParentCommandLine, User, LogonId, Hashes, ProcessGuid','Đáng ngờ: chạy từ C:\\Temp, C:\\Users\\Public; tên ngẫu nhiên; tiến trình cha bất thường (winword.exe sinh ra powershell.exe). Ghép với Security log bằng LogonId.','ext',1],
+ [2,'smon','Thời gian tạo file bị thay đổi','Timestomping: kẻ tấn công sửa ngày tạo file để giấu file mới.','Image, TargetFilename, CreationUtcTime, PreviousCreationUtcTime','Một số trình cài đặt cũng làm vậy; đáng ngờ khi file nằm ở thư mục hệ thống.','ext',0],
+ [3,'smon','Kết nối mạng','Tiến trình nào kết nối ra đâu: C2, tải payload, lateral movement.','Image, DestinationIp, DestinationPort, DestinationHostname, User','Ví dụ đáng ngờ: notepad.exe, rundll32.exe kết nối Internet; kết nối tới port lạ như 4444.','ext',1],
+ [5,'smon','Tiến trình kết thúc','Biết tiến trình chạy bao lâu.','Image, ProcessGuid','','ext',0],
+ [6,'smon','Driver được nạp','Rootkit, driver có lỗ hổng (BYOVD) dùng để tắt EDR.','ImageLoaded, Signed, Signature','Driver không có chữ ký hợp lệ là đáng ngờ.','ext',0],
+ [7,'smon','Module (DLL) được nạp','DLL hijacking, DLL lạ được nạp vào tiến trình hợp lệ.','Image, ImageLoaded, Signed','Rất nhiều nhiễu; cần cấu hình lọc.','ext',0],
+ [8,'smon','CreateRemoteThread','Process injection: tiến trình này chèn code vào tiến trình khác.','SourceImage, TargetImage, StartFunction','Ít khi hợp lệ; đáng điều tra.','ext',1],
+ [10,'smon','Tiến trình truy cập tiến trình khác','Đánh cắp thông tin đăng nhập: dump bộ nhớ lsass.exe (Mimikatz, procdump).','SourceImage, TargetImage, GrantedAccess, CallTrace','TargetImage là lsass.exe với GrantedAccess như 0x1010, 0x1FFFFF từ tiến trình lạ là dấu hiệu rất mạnh.','ext',1],
+ [11,'smon','Tạo file','File mới xuất hiện: payload tải về, web shell, file drop.','Image, TargetFilename, CreationUtcTime','Xem file .exe, .dll, .ps1, .bat tạo trong Temp, Downloads, Startup.','ext',1],
+ [12,'smon','Tạo hoặc xóa khóa registry','Persistence qua registry.','EventType, TargetObject, Image','','ext',0],
+ [13,'smon','Đặt giá trị registry','Persistence: thêm vào khóa Run, RunOnce, Winlogon.','TargetObject, Details, Image','Khóa ...\\CurrentVersion\\Run trỏ tới file trong Temp hoặc AppData là đáng ngờ.','ext',1],
+ [14,'smon','Đổi tên khóa registry','','TargetObject, NewName, Image','','ext',0],
+ [15,'smon','Tạo luồng dữ liệu phụ (ADS)','File tải từ Internet có luồng Zone.Identifier chứa URL nguồn tải về.','Image, TargetFilename, Contents, Hash','Rất hữu ích để biết file được tải từ URL nào (trường Contents chứa HostUrl).','ext',1],
+ [16,'smon','Cấu hình Sysmon thay đổi','Kẻ tấn công sửa cấu hình để Sysmon ngừng ghi.','Configuration, ConfigurationFileHash','','ext',0],
+ [17,'smon','Tạo named pipe','Công cụ C2 (Cobalt Strike), PsExec dùng named pipe.','PipeName, Image','Tên pipe như \\msagent_*, \\PSEXESVC là dấu hiệu.','ext',0],
+ [18,'smon','Kết nối tới named pipe','','PipeName, Image','','ext',0],
+ [19,'smon','WMI event filter được đăng ký','Persistence qua WMI.','Name, Query','19, 20, 21 thường xuất hiện cùng nhau khi tạo WMI persistence.','ext',0],
+ [20,'smon','WMI event consumer được đăng ký','Lệnh sẽ chạy khi điều kiện WMI xảy ra.','Name, Type, Destination','','ext',0],
+ [21,'smon','WMI consumer gắn với filter','Hoàn tất WMI persistence.','Consumer, Filter','','ext',0],
+ [22,'smon','Truy vấn DNS','Tiến trình nào phân giải tên miền nào: C2, DGA, DNS tunneling.','Image, QueryName, QueryResults','Tên miền dài ngẫu nhiên, nhiều subdomain lạ là đáng ngờ.','ext',1],
+ [23,'smon','Xóa file (có lưu bản sao)','Kẻ tấn công xóa công cụ sau khi dùng; Sysmon giữ bản sao.','Image, TargetFilename, Hashes','Cần cấu hình thư mục lưu trữ.','ext',0],
+ [24,'smon','Clipboard thay đổi','','Image, Session','Mặc định không bật trong cấu hình phổ biến.','ext',0],
+ [25,'smon','Process tampering','Process hollowing, herpaderping: tiến trình bị thay ruột.','Image, Type','','ext',0],
+ [26,'smon','Phát hiện xóa file','Giống 23 nhưng không lưu bản sao.','Image, TargetFilename','','ext',0],
+ // ---------- PowerShell ----------
+ [4104,'ps','Script block logging','Ghi lại nội dung thực sự của script PowerShell đã chạy, kể cả sau khi giải mã base64.','ScriptBlockText, ScriptBlockId, Path','Bật qua GPO "Turn on PowerShell Script Block Logging"; một số script đáng ngờ được Windows tự ghi. Tìm: IEX, DownloadString, -enc, FromBase64String, Invoke-Mimikatz.','off',1],
+ [4103,'ps','Module logging','Ghi các lệnh (cmdlet) và tham số đã chạy.','Payload, ContextInfo','Bật qua GPO "Turn on Module Logging".','off',0],
+ [400,'ps','PowerShell engine khởi động','Biết PowerShell được mở, kèm HostApplication (dòng lệnh).','HostApplication, EngineVersion','Nằm trong log "Windows PowerShell" (cũ). EngineVersion 2.0 là dấu hiệu né log (downgrade attack).','on',0,'Windows PowerShell'],
+ [800,'ps','Pipeline thực thi','Chi tiết lệnh trong pipeline.','HostApplication, CommandLine','Nằm trong log "Windows PowerShell".','on',0,'Windows PowerShell'],
+ // ---------- RDP ----------
+ [1149,'rdp','RDP xác thực mạng thành công','Có ai đó kết nối RDP thành công tới máy này, kèm IP nguồn.','User, Domain, Source Network Address','Log RemoteConnectionManager. Ghi khi qua bước xác thực, trước khi vào phiên.','on',1],
+ [21,'rdp','Đăng nhập phiên thành công','Phiên RDP bắt đầu.','User, Session ID, Source Network Address','Log LocalSessionManager.','on',0,'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'],
+ [22,'rdp','Shell khởi động trong phiên','Màn hình desktop đã mở cho phiên RDP.','User, Session ID, Source Network Address','Log LocalSessionManager.','on',0,'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'],
+ [24,'rdp','Phiên bị ngắt kết nối','','User, Session ID, Source Network Address','Log LocalSessionManager.','on',0,'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'],
+ [25,'rdp','Kết nối lại phiên','','User, Session ID, Source Network Address','Log LocalSessionManager.','on',0,'Microsoft-Windows-TerminalServices-LocalSessionManager/Operational'],
+ [131,'rdp','Server chấp nhận kết nối RDP','Có kết nối TCP tới RDP, kể cả khi đăng nhập thất bại. Hữu ích khi thấy brute force.','ClientIP','Log RemoteDesktopServices-RdpCoreTS.','on',0,'Microsoft-Windows-RemoteDesktopServices-RdpCoreTS/Operational'],
+ // ---------- Defender ----------
+ [1116,'def','Defender phát hiện malware','Có mã độc trên máy.','Threat Name, Severity, Path, Process Name, Detection User','Xem Path để biết file nằm đâu, và đối chiếu thời gian với Sysmon 11.','on',1],
+ [1117,'def','Defender đã xử lý malware','Biết malware đã bị xóa, cách ly, hay chưa xử lý được.','Threat Name, Action, Path','Action thất bại nghĩa là malware vẫn còn.','on',1],
+ [5001,'def','Bảo vệ thời gian thực bị tắt','Kẻ tấn công tắt Defender trước khi chạy malware.','','Rất đáng ngờ nếu không có thay đổi được duyệt.','on',1],
+ [5007,'def','Cấu hình Defender thay đổi','Ví dụ: thêm thư mục loại trừ (exclusion) để giấu malware.','Old Value, New Value','Exclusion mới trỏ tới Temp, AppData là dấu hiệu mạnh.','on',1],
+ // ---------- Task Scheduler ----------
+ [106,'task','Scheduled task được đăng ký','Persistence. Log này bật mặc định nên hữu ích khi Security 4698 không bật.','Task Name, User Context','','on',1],
+ [200,'task','Task bắt đầu chạy action','Task đã thực sự chạy.','Task Name, Action Name','','on',0],
+ [141,'task','Task bị xóa','','Task Name, User','','on',0],
+ // ---------- Khác ----------
+ [5861,'other','WMI permanent event consumer được đăng ký','Persistence qua WMI khi không có Sysmon.','Namespace, ESS, Consumer, PossibleCause','Log WMI-Activity/Operational.','on',0,'Microsoft-Windows-WMI-Activity/Operational'],
+ [59,'other','BITS bắt đầu job tải file','Kẻ tấn công dùng bitsadmin để tải payload và né tường lửa.','Job Title, URL','Log Bits-Client/Operational. URL lạ là đáng ngờ.','on',0,'Microsoft-Windows-Bits-Client/Operational'],
+ [2004,'other','Thêm rule tường lửa','Kẻ tấn công mở port cho backdoor hoặc RDP.','Rule Name, Application Path, Local Port, Direction','Log Windows Firewall With Advanced Security/Firewall.','on',0,'Microsoft-Windows-Windows Firewall With Advanced Security/Firewall']
+];
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const norm = s => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d');
+const DEF = {on:['d-on','Bật mặc định'], off:['d-off','Cần bật audit'], ext:['d-ext','Cần cài Sysmon']};
+const KW = {4625:'brute force spraying sai mat khau that bai', 4624:'rdp dang nhap logon', 1102:'xoa log clear', 104:'xoa log clear', 10:'lsass mimikatz credential dump', 1:'process tien trinh', 4688:'process tien trinh', 7045:'psexec service', 4697:'psexec service', 15:'download tai ve url zone identifier', 4104:'powershell base64 encoded', 4769:'kerberoasting', 1149:'rdp remote desktop', 131:'rdp remote desktop brute force'};
+
+let src = null, starOnly = false;
+$('srcChips').innerHTML = '<button type="button" class="chip" data-s="" aria-pressed="true">Tất cả</button>' +
+  Object.entries(SRC).map(([k, v]) => '<button type="button" class="chip" data-s="' + k + '" aria-pressed="false"><span class="dot s-' + k + '"></span>' + esc(v.n) + '</button>').join('');
+
+function hl(text, terms){
+  let out = esc(text);
+  terms.forEach(t => {
+    if(t.length < 2 || /^\d+$/.test(t)) return;
+    const re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    if(norm(text).includes(t) && text.toLowerCase().includes(t)) out = out.replace(re, '<mark>$1</mark>');
+  });
+  return out;
+}
+
+function render(){
+  const raw = $('q').value.trim();
+  const terms = norm(raw).split(/\s+/).filter(Boolean);
+  const list = E.filter(e => {
+    if(src && e[1] !== src) return false;
+    if(starOnly && !e[7]) return false;
+    if(!terms.length) return true;
+    const hay = norm([e[0], SRC[e[1]].n, e[2], e[3], e[4], e[5], KW[e[0]] || '', e[8] || SRC[e[1]].log].join(' '));
+    return terms.every(t => /^\d+$/.test(t) ? String(e[0]).startsWith(t) || hay.includes(t) : hay.includes(t));
+  });
+  // Đưa ID khớp chính xác lên đầu
+  list.sort((a, b) => (terms.includes(String(b[0])) ? 1 : 0) - (terms.includes(String(a[0])) ? 1 : 0));
+  $('count').textContent = list.length + ' / ' + E.length + ' event';
+  $('tbody').innerHTML = list.length ? list.map(e => {
+    const d = DEF[e[6]];
+    return '<tr>' +
+      '<td class="id"><button type="button" class="idbtn" data-id="' + e[0] + '" data-log="' + esc(e[8] || SRC[e[1]].log) + '" title="Copy lệnh PowerShell lọc event này">' + e[0] + '</button>' + (e[7] ? '<span class="star" aria-label="quan trọng">★</span>' : '') +
+      '<br><span class="src s-' + e[1] + '">' + esc(SRC[e[1]].n) + '</span></td>' +
+      '<td class="name"><b>' + hl(e[2], terms) + '</b>' + (e[3] ? '<span>' + hl(e[3], terms) + '</span>' : '') + '<br><span class="def ' + d[0] + '">' + d[1] + '</span></td>' +
+      '<td class="fields">' + hl(e[4], terms) + '</td>' +
+      '<td class="note">' + (e[5] ? hl(e[5], terms) : '<span style="color:var(--muted)">—</span>') + '</td></tr>';
+  }).join('') : '<tr><td colspan="4" class="empty">Không có event nào khớp. Thử từ khóa khác hoặc bỏ bộ lọc.</td></tr>';
+}
+
+$('q').addEventListener('input', render);
+$('srcChips').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if(!b) return;
+  src = b.dataset.s || null;
+  $('srcChips').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b)));
+  render();
+});
+$('starOnly').addEventListener('click', e => {
+  starOnly = !starOnly; e.currentTarget.setAttribute('aria-pressed', String(starOnly)); render();
+});
+let tt = null;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('show'), 2600); }
+$('tbody').addEventListener('click', async e => {
+  const b = e.target.closest('.idbtn'); if(!b) return;
+  const cmd = "Get-WinEvent -FilterHashtable @{LogName='" + b.dataset.log + "'; Id=" + b.dataset.id + "} -MaxEvents 50 | Format-List TimeCreated, Id, Message";
+  try { await navigator.clipboard.writeText(cmd); toast('Đã copy: ' + cmd); }
+  catch(err){ toast(cmd); }
+});
+render();
+</script>
+</body>
+</html>

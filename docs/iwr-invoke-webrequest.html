@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IWR — Invoke-WebRequest · Definition & Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --h1:#ffffff; --muted:#8b949e;
+    --accent:#a371f7; --accent-ink:#0d1117; --accent-bg:rgba(163,113,247,.08); --accent-bd:rgba(163,113,247,.30);
+    --code-bg:#1c2128;
+    --green:#3fb950; --amber:#d29922; --blue:#58a6ff;
+    --pill-ok-bg:rgba(63,185,80,.15); --pill-ok-bd:rgba(63,185,80,.40);
+    --pill-no-bg:rgba(139,148,158,.15); --pill-no-bd:rgba(139,148,158,.40);
+    --pre-bg:#010409; --pre-bd:#30363d;
+    --s-cmd:#3fb950; --s-flag:#d29922; --s-tool:#58a6ff; --s-cmt:#8b949e;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  /* LIGHT MODE — color code taken from index.html */
+  html[data-theme="light"]{
+    --bg:#f5f2ec; --panel:#fbf9f5; --border:#d6d0c6; --text:#1c1b19; --h1:#1c1b19; --muted:#5c5852;
+    --accent:oklch(0.55 0.15 35); --accent-ink:#fbf9f5; --accent-bg:rgba(176,84,43,.09); --accent-bd:rgba(176,84,43,.30);
+    --code-bg:#ebe6dd;
+    --green:#1a7f37; --amber:#9a6700; --blue:#0a66c2;
+    --pill-ok-bg:rgba(26,127,55,.12); --pill-ok-bd:rgba(26,127,55,.35);
+    --pill-no-bg:rgba(92,88,82,.12); --pill-no-bd:rgba(92,88,82,.30);
+  }
+  html[lang="en"] .vi, html[lang="vi"] .en{display:none !important;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;
+    transition:background .2s,color .2s;}
+  .wrap{max-width:860px;margin:0 auto;padding:64px 22px 80px;}
+  .lang,.theme{position:fixed;top:16px;z-index:50;display:flex;border:1px solid var(--border);
+    border-radius:7px;overflow:hidden;background:var(--panel);box-shadow:0 2px 12px rgba(0,0,0,.25);}
+  .lang{left:16px;} .theme{right:16px;}
+  .lang button,.theme button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;border:0;
+    background:transparent;color:var(--text);padding:6px 12px;cursor:pointer;transition:.15s;line-height:1;}
+  .lang button:hover,.theme button:hover{color:var(--accent);}
+  .lang button[aria-pressed="true"],.theme button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);}
+  .lang button[aria-pressed="true"]:hover,.theme button[aria-pressed="true"]:hover{color:var(--accent-ink);}
+  .theme button{font-size:13px;}
+  header{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:34px;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--accent);
+    border:1px solid var(--accent);border-radius:5px;padding:2px 9px;margin-bottom:14px;letter-spacing:.5px;}
+  h1{font-family:var(--mono);font-size:30px;margin:0 0 8px;color:var(--h1);}
+  h1 .ext{color:var(--muted);font-weight:400;font-size:20px;}
+  .sub{color:var(--muted);font-size:15px;margin:0;}
+  h2{font-size:20px;margin:40px 0 14px;padding-left:12px;border-left:4px solid var(--accent);}
+  h3{font-size:16px;margin:26px 0 10px;color:var(--accent);}
+  p{margin:10px 0;}
+  .analogy{background:var(--accent-bg);border:1px solid var(--accent-bd);
+    border-radius:10px;padding:14px 18px;margin:16px 0;font-size:14.5px;}
+  .analogy b{color:var(--accent);}
+  code{font-family:var(--mono);background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:13.5px;color:var(--text);}
+  pre{background:var(--pre-bg);border:1px solid var(--pre-bd);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13.5px;margin:14px 0;color:#e6edf3;}
+  pre .c{color:var(--s-cmd);} pre .f{color:var(--s-flag);} pre .u{color:var(--s-tool);} pre .cm{color:var(--s-cmt);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--panel);color:var(--accent);font-weight:600;}
+  td code{white-space:nowrap;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:16px 0;}
+  .card.blue{border-left:4px solid var(--blue);}
+  .card h3{margin-top:0;} .card.blue h3{color:var(--blue);}
+  ul{margin:10px 0;padding-left:22px;} li{margin:6px 0;}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:4px;margin-right:6px;}
+  .pill.ok{background:var(--pill-ok-bg);color:var(--green);border:1px solid var(--pill-ok-bd);}
+  .pill.no{background:var(--pill-no-bg);color:var(--muted);border:1px solid var(--pill-no-bd);}
+  .nav{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+  .nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;
+    border:1px solid var(--border);border-radius:20px;padding:5px 14px;transition:.15s;}
+  .nav a:hover{color:var(--accent);border-color:var(--accent);}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px;}
+  .warn{color:var(--amber);font-weight:600;}
+</style>
+<script>
+  // Set language (default English) and theme (default dark) before paint
+  (function(){try{var d=document.documentElement;
+    d.lang=localStorage.getItem('ref-lang')||'en';
+    d.setAttribute('data-theme',localStorage.getItem('ref-theme')||'dark');
+  }catch(e){var d=document.documentElement;d.lang='en';d.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+
+<div class="lang" role="group" aria-label="Language">
+  <button data-lang="en" aria-pressed="true">EN</button><button data-lang="vi" aria-pressed="false">VI</button>
+</div>
+<div class="theme" role="group" aria-label="Theme">
+  <button data-theme="light" aria-pressed="false" title="Light mode">☀</button><button data-theme="dark" aria-pressed="true" title="Dark mode">☾</button>
+</div>
+
+<div class="wrap">
+<header>
+  <span class="tag">POWERSHELL · CMDLET</span>
+  <h1>IWR <span class="ext">(Invoke-WebRequest)</span></h1>
+  <p class="sub en">PowerShell's web-content download cmdlet</p>
+  <p class="sub vi">Cmdlet tải nội dung web của PowerShell</p>
+</header>
+
+<div class="nav">
+  <a href="#dn"><span class="en">Definition</span><span class="vi">Định nghĩa</span></a>
+  <a href="#cp"><span class="en">Syntax</span><span class="vi">Cú pháp</span></a>
+  <a href="#bt"><span class="en">Variants</span><span class="vi">Biến thể</span></a>
+  <a href="#blue"><span class="en">Blue-team view</span><span class="vi">Góc blue team</span></a>
+  <a href="#khi"><span class="en">When to use</span><span class="vi">Khi nào dùng</span></a>
+</div>
+
+<h2 id="dn"><span class="en">1. Definition</span><span class="vi">1. Định nghĩa</span></h2>
+<p class="en"><code>IWR</code> is the <b>alias</b> (short name) of the <code>Invoke-WebRequest</code> cmdlet in PowerShell.
+It sends an HTTP/HTTPS request to a URL and returns the content — you can save it to a file, or read the text,
+headers, status code directly...</p>
+<p class="vi"><code>IWR</code> là <b>alias</b> (tên gọi tắt) của cmdlet <code>Invoke-WebRequest</code> trong PowerShell.
+Nó gửi yêu cầu HTTP/HTTPS tới một URL rồi trả về nội dung — có thể lưu ra file, hoặc đọc thẳng text,
+header, status code...</p>
+<div class="analogy en">
+  <b>Analogy:</b> If certutil is the "registry clerk" who carries a parcel as a side favour, then
+  <b>Invoke-WebRequest</b> is the "professional courier": it fills in the form (headers), shows credentials (auth),
+  passes through transit hubs (proxy) and unpacks the parcel (parses HTML) all the way to its destination.
+</div>
+<div class="analogy vi">
+  <b>Ví von:</b> Nếu certutil là "nhân viên hộ tịch" tiện tay xách giúp một kiện hàng, thì
+  <b>Invoke-WebRequest</b> là "nhân viên giao vận chuyên nghiệp": biết điền phiếu (header), xuất trình
+  giấy tờ (auth), đi qua trạm trung chuyển (proxy) và bóc tách bưu kiện (parse HTML) đến nơi đến chốn.
+</div>
+
+<h2 id="cp"><span class="en">2. Basic syntax</span><span class="vi">2. Cú pháp cơ bản</span></h2>
+<pre><span class="u">IWR</span> <span class="c">-Uri</span> http://host/file.bin <span class="c">-OutFile</span> output.bin</pre>
+<p class="en">Written out in full for clarity:</p>
+<p class="vi">Viết đầy đủ cho dễ nhớ ý nghĩa:</p>
+<pre><span class="u">Invoke-WebRequest</span> <span class="c">-Uri</span> "http://host/file.bin" <span class="c">-OutFile</span> "output.bin"</pre>
+<table class="en">
+  <tr><th>Parameter</th><th>What it does</th><th>Analogy</th></tr>
+  <tr><td><code>-Uri</code></td><td>The address to fetch</td><td>Write the warehouse address on the form</td></tr>
+  <tr><td><code>-OutFile</code></td><td>The filename to save to disk</td><td>Point to where goods go when they arrive</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Tham số</th><th>Việc nó làm</th><th>Ví von</th></tr>
+  <tr><td><code>-Uri</code></td><td>Địa chỉ cần lấy</td><td>Ghi địa chỉ nhà kho lên phiếu</td></tr>
+  <tr><td><code>-OutFile</code></td><td>Tên file lưu ra đĩa</td><td>Chỉ chỗ xếp hàng khi mang về</td></tr>
+</table>
+
+<h2 id="bt"><span class="en">3. Common variants</span><span class="vi">3. Vài biến thể hay gặp</span></h2>
+
+<h3 class="en">Lighter and faster <span class="pill ok">RECOMMENDED</span></h3>
+<h3 class="vi">Tải nhẹ, nhanh hơn <span class="pill ok">NÊN DÙNG</span></h3>
+<p class="en">IWR by default tries to parse the page DOM (slow, sometimes errors). Turn it off for a lean fetch:</p>
+<p class="vi">IWR mặc định cố phân tích DOM của trang (chậm, đôi khi lỗi). Tắt đi cho gọn:</p>
+<pre><span class="u">IWR</span> <span class="c">-Uri</span> http://host/file.bin <span class="c">-OutFile</span> output.bin <span class="f">-UseBasicParsing</span></pre>
+
+<h3 class="en">Read the content now, without saving a file</h3>
+<h3 class="vi">Đọc nội dung ngay, không lưu file</h3>
+<p class="en">Good when the URL returns text (e.g. grabbing a string shown directly):</p>
+<p class="vi">Hợp khi URL trả về text (ví dụ nhặt một chuỗi hiển thị trực tiếp):</p>
+<pre>(<span class="u">IWR</span> <span class="c">-Uri</span> http://host/path <span class="f">-UseBasicParsing</span>).Content</pre>
+
+<h3 class="en">An older approach — WebClient</h3>
+<h3 class="vi">Cách cổ điển hơn — WebClient</h3>
+<p class="en">Same .NET family, common in older docs:</p>
+<p class="vi">Cùng họ .NET, hay gặp trong tài liệu cũ:</p>
+<pre>(<span class="u">New-Object</span> System.Net.WebClient).DownloadFile("http://host/file.bin","output.bin")</pre>
+
+<h3 class="en">Add headers / auth / proxy</h3>
+<h3 class="vi">Thêm header / auth / proxy</h3>
+<pre><span class="u">IWR</span> <span class="c">-Uri</span> https://host/api <span class="c">-Headers</span> @{Authorization="Bearer xxx"} <span class="c">-OutFile</span> data.json</pre>
+<p class="en">This is where IWR far outstrips certutil: request customisation is very flexible.</p>
+<p class="vi">Đây là điểm IWR vượt xa certutil: tùy biến request rất linh hoạt.</p>
+
+<h2 id="blue"><span class="en">4. Blue-team view</span><span class="vi">4. Góc blue team</span></h2>
+<div class="card blue">
+  <h3 class="en">PowerShell leaves more traces — if full logging is on</h3>
+  <h3 class="vi">PowerShell để lại nhiều dấu vết hơn — nếu bật log đầy đủ</h3>
+  <ul>
+    <li class="en"><b>Script Block Logging</b> (Event ID <code>4104</code>) — records the full content of commands that ran, even when obfuscated.</li>
+    <li class="vi"><b>Script Block Logging</b> (Event ID <code>4104</code>) — ghi lại toàn bộ nội dung lệnh đã chạy, kể cả khi bị làm rối (obfuscate).</li>
+    <li class="en"><b>Module Logging</b> (Event ID <code>4103</code>) — records which cmdlet was called and its parameters.</li>
+    <li class="vi"><b>Module Logging</b> (Event ID <code>4103</code>) — ghi chi tiết cmdlet được gọi và tham số.</li>
+    <li class="en"><b>Transcription</b> — saves the entire PowerShell session to a text file.</li>
+    <li class="vi"><b>Transcription</b> — lưu toàn bộ phiên PowerShell ra file text.</li>
+  </ul>
+  <p class="en"><b>MITRE ATT&amp;CK:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1059.001</code> (Command and Scripting Interpreter: PowerShell).</p>
+  <p class="vi"><b>MITRE ATT&amp;CK:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1059.001</code> (Command and Scripting Interpreter: PowerShell).</p>
+  <div class="analogy en">
+    <b>Analogy:</b> IWR is like walking in the front door of a building full of cameras. Very convenient and powerful,
+    but if the defenders have enough "cameras" on (the logs above) every step is recorded in full.
+  </div>
+  <div class="analogy vi">
+    <b>Ví von:</b> IWR như đi cửa chính của một tòa nhà nhiều camera. Rất tiện và mạnh, nhưng nếu
+    phòng thủ bật đủ "camera" (các loại log trên) thì mỗi bước đi đều được ghi hình đầy đủ.
+  </div>
+</div>
+
+<h2 id="khi"><span class="en">5. When to use IWR</span><span class="vi">5. Khi nào nên dùng IWR</span></h2>
+<table class="en">
+  <tr><th>Situation</th><th>Is IWR a good fit?</th></tr>
+  <tr><td>Need headers, tokens, proxy, or to POST data</td><td><span class="pill ok">FIT</span> Very strong request customisation</td></tr>
+  <tr><td>Want to process the result: parse JSON, filter, loop</td><td><span class="pill ok">FIT</span> Built into the PowerShell ecosystem</td></tr>
+  <tr><td>Automate several steps in one script</td><td><span class="pill ok">FIT</span> Easy to combine variables &amp; logic</td></tr>
+  <tr><td>Machine only has cmd.exe, PowerShell is restricted</td><td><span class="pill no">WEAK</span> certutil is handier here</td></tr>
+  <tr><td>Only need to hash-check a file</td><td><span class="pill no">WEAK</span> <code>certutil -hashfile</code> is more compact</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Tình huống</th><th>IWR có hợp không?</th></tr>
+  <tr><td>Cần header, token, proxy, hoặc POST dữ liệu</td><td><span class="pill ok">HỢP</span> Tùy biến request rất mạnh</td></tr>
+  <tr><td>Muốn xử lý kết quả: parse JSON, lọc, vòng lặp</td><td><span class="pill ok">HỢP</span> Nằm sẵn trong hệ sinh thái PowerShell</td></tr>
+  <tr><td>Tự động hóa nhiều bước trong một script</td><td><span class="pill ok">HỢP</span> Kết hợp biến &amp; logic dễ dàng</td></tr>
+  <tr><td>Máy chỉ có cmd.exe, PowerShell bị hạn chế</td><td><span class="pill no">KÉM</span> Lúc này certutil tiện hơn</td></tr>
+  <tr><td>Chỉ cần tính hash kiểm tra file</td><td><span class="pill no">KÉM</span> <code>certutil -hashfile</code> gọn hơn</td></tr>
+</table>
+<p class="en">👉 See the companion page <b>certutil.exe</b> for a full comparison.</p>
+<p class="vi">👉 Xem trang song song <b>certutil.exe</b> để đối chiếu đầy đủ.</p>
+
+<footer>
+  <span class="en">Reference page for learning · for sandbox labs (TryHackMe) &amp; authorised environments ·
+  Run any file-download example only on machines you own or are permitted to use.</span>
+  <span class="vi">Trang tra cứu học tập · dành cho lab sandbox (TryHackMe) &amp; môi trường được phép ·
+  Mọi lệnh tải file minh họa chỉ nên chạy trên máy bạn sở hữu hoặc có quyền.</span>
+</footer>
+</div>
+
+<script>
+  function setLang(l){
+    document.documentElement.lang=l;
+    try{localStorage.setItem('ref-lang',l);}catch(e){}
+    document.querySelectorAll('.lang button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.lang===l ? 'true':'false');
+    });
+  }
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('ref-theme',t);}catch(e){}
+    document.querySelectorAll('.theme button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.theme===t ? 'true':'false');
+    });
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){setLang(b.dataset.lang);});
+  });
+  document.querySelectorAll('.theme button').forEach(function(b){
+    b.addEventListener('click',function(){setTheme(b.dataset.theme);});
+  });
+  setLang(document.documentElement.lang);
+  setTheme(document.documentElement.getAttribute('data-theme')||'dark');
+</script>
+</body>
+</html>

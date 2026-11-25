@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>certutil.exe — Definition & Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --h1:#ffffff; --muted:#8b949e;
+    --accent:#39d0d8; --accent-ink:#0d1117; --accent-bg:rgba(57,208,216,.07); --accent-bd:rgba(57,208,216,.30);
+    --code-bg:#1c2128;
+    --green:#3fb950; --amber:#d29922; --blue:#58a6ff;
+    --pill-ok-bg:rgba(63,185,80,.15); --pill-ok-bd:rgba(63,185,80,.40);
+    --pill-no-bg:rgba(139,148,158,.15); --pill-no-bd:rgba(139,148,158,.40);
+    /* code-block syntax stays bright on the always-dark terminal panel */
+    --pre-bg:#010409; --pre-bd:#30363d;
+    --s-cmd:#3fb950; --s-flag:#d29922; --s-tool:#58a6ff; --s-cmt:#8b949e;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  /* LIGHT MODE — color code taken from index.html */
+  html[data-theme="light"]{
+    --bg:#f5f2ec; --panel:#fbf9f5; --border:#d6d0c6; --text:#1c1b19; --h1:#1c1b19; --muted:#5c5852;
+    --accent:oklch(0.55 0.15 35); --accent-ink:#fbf9f5; --accent-bg:rgba(176,84,43,.09); --accent-bd:rgba(176,84,43,.30);
+    --code-bg:#ebe6dd;
+    --green:#1a7f37; --amber:#9a6700; --blue:#0a66c2;
+    --pill-ok-bg:rgba(26,127,55,.12); --pill-ok-bd:rgba(26,127,55,.35);
+    --pill-no-bg:rgba(92,88,82,.12); --pill-no-bd:rgba(92,88,82,.30);
+  }
+  html[lang="en"] .vi, html[lang="vi"] .en{display:none !important;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;
+    transition:background .2s,color .2s;}
+  .wrap{max-width:860px;margin:0 auto;padding:64px 22px 80px;}
+  /* toggles */
+  .lang,.theme{position:fixed;top:16px;z-index:50;display:flex;border:1px solid var(--border);
+    border-radius:7px;overflow:hidden;background:var(--panel);box-shadow:0 2px 12px rgba(0,0,0,.25);}
+  .lang{left:16px;} .theme{right:16px;}
+  .lang button,.theme button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;border:0;
+    background:transparent;color:var(--text);padding:6px 12px;cursor:pointer;transition:.15s;line-height:1;}
+  .lang button:hover,.theme button:hover{color:var(--accent);}
+  .lang button[aria-pressed="true"],.theme button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);}
+  .lang button[aria-pressed="true"]:hover,.theme button[aria-pressed="true"]:hover{color:var(--accent-ink);}
+  .theme button{font-size:13px;}
+  header{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:34px;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--accent);
+    border:1px solid var(--accent);border-radius:5px;padding:2px 9px;margin-bottom:14px;letter-spacing:.5px;}
+  h1{font-family:var(--mono);font-size:30px;margin:0 0 8px;color:var(--h1);}
+  h1 .ext{color:var(--muted);font-weight:400;}
+  .sub{color:var(--muted);font-size:15px;margin:0;}
+  h2{font-size:20px;margin:40px 0 14px;padding-left:12px;border-left:4px solid var(--accent);}
+  h3{font-size:16px;margin:26px 0 10px;color:var(--accent);}
+  p{margin:10px 0;}
+  .analogy{background:var(--accent-bg);border:1px solid var(--accent-bd);
+    border-radius:10px;padding:14px 18px;margin:16px 0;font-size:14.5px;}
+  .analogy b{color:var(--accent);}
+  code{font-family:var(--mono);background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:13.5px;color:var(--text);}
+  pre{background:var(--pre-bg);border:1px solid var(--pre-bd);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13.5px;margin:14px 0;color:#e6edf3;}
+  pre .c{color:var(--s-cmd);} pre .f{color:var(--s-flag);} pre .u{color:var(--s-tool);} pre .cm{color:var(--s-cmt);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--panel);color:var(--accent);font-weight:600;}
+  td code{white-space:nowrap;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:16px 0;}
+  .card.sec{border-left:4px solid var(--amber);}
+  .card.blue{border-left:4px solid var(--blue);}
+  .card h3{margin-top:0;}
+  .card.sec h3{color:var(--amber);} .card.blue h3{color:var(--blue);}
+  ul{margin:10px 0;padding-left:22px;} li{margin:6px 0;}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:4px;margin-right:6px;}
+  .pill.ok{background:var(--pill-ok-bg);color:var(--green);border:1px solid var(--pill-ok-bd);}
+  .pill.no{background:var(--pill-no-bg);color:var(--muted);border:1px solid var(--pill-no-bd);}
+  .nav{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+  .nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;
+    border:1px solid var(--border);border-radius:20px;padding:5px 14px;transition:.15s;}
+  .nav a:hover{color:var(--accent);border-color:var(--accent);}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px;}
+  .warn{color:var(--amber);font-weight:600;}
+</style>
+<script>
+  // Set language (default English) and theme (default dark) before paint
+  (function(){try{var d=document.documentElement;
+    d.lang=localStorage.getItem('ref-lang')||'en';
+    d.setAttribute('data-theme',localStorage.getItem('ref-theme')||'dark');
+  }catch(e){var d=document.documentElement;d.lang='en';d.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+
+<div class="lang" role="group" aria-label="Language">
+  <button data-lang="en" aria-pressed="true">EN</button><button data-lang="vi" aria-pressed="false">VI</button>
+</div>
+<div class="theme" role="group" aria-label="Theme">
+  <button data-theme="light" aria-pressed="false" title="Light mode">☀</button><button data-theme="dark" aria-pressed="true" title="Dark mode">☾</button>
+</div>
+
+<div class="wrap">
+<header>
+  <span class="tag">WINDOWS · CERTIFICATE TOOL</span>
+  <h1>certutil<span class="ext">.exe</span></h1>
+  <p class="sub en">Windows command-line certificate management tool</p>
+  <p class="sub vi">Công cụ dòng lệnh quản lý chứng chỉ số của Windows</p>
+</header>
+
+<div class="nav">
+  <a href="#dn"><span class="en">Definition</span><span class="vi">Định nghĩa</span></a>
+  <a href="#cp"><span class="en">Syntax</span><span class="vi">Cú pháp</span></a>
+  <a href="#lenh"><span class="en">Common commands</span><span class="vi">Lệnh thường dùng</span></a>
+  <a href="#tai"><span class="en">Downloading files</span><span class="vi">Tải file</span></a>
+  <a href="#bt"><span class="en">Blue-team view</span><span class="vi">Góc blue team</span></a>
+  <a href="#khi"><span class="en">When to use</span><span class="vi">Khi nào dùng</span></a>
+</div>
+
+<h2 id="dn"><span class="en">1. Definition</span><span class="vi">1. Định nghĩa</span></h2>
+<p class="en"><code>certutil.exe</code> is a command-line utility built into <b>every Windows machine</b>, located at
+<code>C:\Windows\System32\</code>, part of <i>Active Directory Certificate Services</i>. Its original job:
+view, verify, configure and manage <b>digital certificates</b> and revocation lists (CRL).</p>
+<p class="vi"><code>certutil.exe</code> là tiện ích dòng lệnh có sẵn trên <b>mọi máy Windows</b>, nằm tại
+<code>C:\Windows\System32\</code>, thuộc bộ <i>Active Directory Certificate Services</i>. Nhiệm vụ gốc:
+xem, kiểm tra, cấu hình và quản lý <b>chứng chỉ số</b> (certificate) cùng danh sách thu hồi (CRL).</p>
+<div class="analogy en">
+  <b>Analogy:</b> A digital certificate is like the "ID card" of a website, program or server.
+  <b>certutil</b> is the "registry clerk" — it views, cross-checks, backs up and converts the format of those documents.
+</div>
+<div class="analogy vi">
+  <b>Ví von:</b> Chứng chỉ số giống "giấy tờ tùy thân" của website, phần mềm hay máy chủ.
+  <b>certutil</b> là "nhân viên phòng hộ tịch" — chuyên xem, đối chiếu, sao lưu và chuyển đổi định dạng các giấy tờ đó.
+</div>
+
+<h2 id="cp"><span class="en">2. General syntax</span><span class="vi">2. Cú pháp chung</span></h2>
+<pre><span class="u">certutil</span> [options] <span class="c">-&lt;command&gt;</span> [parameters]</pre>
+<ul>
+  <li class="en"><code>certutil -?</code> — list all commands</li>
+  <li class="vi"><code>certutil -?</code> — liệt kê toàn bộ lệnh</li>
+  <li class="en"><code>certutil -&lt;command&gt; -?</code> — see details of one command</li>
+  <li class="vi"><code>certutil -&lt;lệnh&gt; -?</code> — xem chi tiết một lệnh cụ thể</li>
+</ul>
+<p class="warn en">⚠ Note: if you type certutil with a parameter but <b>forget to specify a command</b>, it defaults to
+<code>-dump</code> (read a certificate file). Give it a URL and it looks for a file on disk → <code>ERROR_FILE_NOT_FOUND</code>.</p>
+<p class="warn vi">⚠ Lưu ý: nếu gõ certutil kèm tham số mà <b>quên chỉ định lệnh</b>, nó mặc định chạy
+<code>-dump</code> (đọc file chứng chỉ). Đưa cho nó một URL thì nó đi tìm file trên đĩa → <code>ERROR_FILE_NOT_FOUND</code>.</p>
+
+<h2 id="lenh"><span class="en">3. Common valid commands</span><span class="vi">3. Các lệnh hợp lệ thường dùng</span></h2>
+
+<h3 class="en">Hash a file to check integrity <span class="pill ok">MOST USED</span></h3>
+<h3 class="vi">Tính hash kiểm tra toàn vẹn file <span class="pill ok">DÙNG NHIỀU NHẤT</span></h3>
+<pre><span class="u">certutil</span> <span class="c">-hashfile</span> C:\path\file.iso <span class="f">SHA256</span></pre>
+<p class="en">Supports <code>MD5</code>, <code>SHA1</code>, <code>SHA256</code>, <code>SHA512</code>.</p>
+<p class="vi">Hỗ trợ <code>MD5</code>, <code>SHA1</code>, <code>SHA256</code>, <code>SHA512</code>.</p>
+<div class="analogy en">
+  <b>Analogy:</b> A hash is a file's "fingerprint" — change one byte and the fingerprint changes completely.
+  Compare it against the value the vendor publishes to confirm a downloaded firmware / SPI-AOI installer is intact.
+</div>
+<div class="analogy vi">
+  <b>Ví von:</b> Hash là "vân tay" của file — sửa 1 byte là vân tay đổi hẳn. So với giá trị nhà cung cấp
+  công bố để biết firmware / bộ cài máy SPI-AOI tải về có nguyên vẹn không.
+</div>
+
+<h3 class="en">View the certificate store</h3>
+<h3 class="vi">Xem kho chứng chỉ</h3>
+<pre class="en"><span class="u">certutil</span> <span class="c">-store</span> My     <span class="cm"># user / machine certificates</span>
+<span class="u">certutil</span> <span class="c">-store</span> Root   <span class="cm"># trusted root CAs</span></pre>
+<pre class="vi"><span class="u">certutil</span> <span class="c">-store</span> My     <span class="cm"># chứng chỉ của user/máy</span>
+<span class="u">certutil</span> <span class="c">-store</span> Root   <span class="cm"># các CA gốc được tin cậy</span></pre>
+
+<h3 class="en">Read &amp; verify a certificate file</h3>
+<h3 class="vi">Đọc &amp; kiểm tra một file chứng chỉ</h3>
+<pre class="en"><span class="u">certutil</span> <span class="c">-dump</span> C:\cert\server.cer     <span class="cm"># issuer, validity, algorithm</span>
+<span class="u">certutil</span> <span class="c">-verify</span> C:\cert\server.cer   <span class="cm"># check trust chain + revocation</span></pre>
+<pre class="vi"><span class="u">certutil</span> <span class="c">-dump</span> C:\cert\server.cer     <span class="cm"># người cấp, hạn dùng, thuật toán</span>
+<span class="u">certutil</span> <span class="c">-verify</span> C:\cert\server.cer   <span class="cm"># kiểm tra chuỗi tin cậy + thu hồi</span></pre>
+
+<h3 class="en">Convert Base64 ↔ binary (PEM ↔ DER)</h3>
+<h3 class="vi">Chuyển đổi Base64 ↔ nhị phân (PEM ↔ DER)</h3>
+<pre><span class="u">certutil</span> <span class="c">-encode</span> input.bin output.txt
+<span class="u">certutil</span> <span class="c">-decode</span> input.txt output.bin</pre>
+
+<h2 id="tai"><span class="en">4. Downloading a file from a URL</span><span class="vi">4. Tải file từ URL</span></h2>
+<p class="en">The <code>-urlcache</code> parameter was made to <b>manage the certificate/CRL URL cache</b>, but since it can
+"call out to the network and pull a file back", it can also download files. To download correctly you need <b>all 3 pieces</b>:</p>
+<p class="vi">Tham số <code>-urlcache</code> sinh ra để <b>quản lý cache URL của chứng chỉ/CRL</b>, nhưng vì biết "gọi ra
+mạng kéo file về" nên cũng làm được việc tải file. Muốn tải đúng, cần <b>đủ 3 mảnh</b>:</p>
+<pre><span class="u">certutil</span> <span class="c">-urlcache</span> <span class="f">-split -f</span> http://host/file.bin output.bin</pre>
+<table class="en">
+  <tr><th>Parameter</th><th>What it does</th><th>Analogy</th></tr>
+  <tr><td><code>-urlcache</code></td><td>Allows network calls via the URL cache mechanism</td><td>Opens the warehouse gate</td></tr>
+  <tr><td><code>-f</code></td><td>Force — skip the cache, fetch a fresh copy</td><td>Insist on fresh goods, not leftovers</td></tr>
+  <tr><td><code>-split</code></td><td>Split &amp; write the correct content to the output file</td><td>Unpack the goods and shelve them</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Tham số</th><th>Việc nó làm</th><th>Ví von</th></tr>
+  <tr><td><code>-urlcache</code></td><td>Cho phép gọi ra mạng qua cơ chế cache URL</td><td>Mở cổng kho</td></tr>
+  <tr><td><code>-f</code></td><td>Force — bỏ qua cache, tải bản mới</td><td>Bắt lấy hàng tươi, không lấy hàng tồn</td></tr>
+  <tr><td><code>-split</code></td><td>Tách &amp; ghi đúng nội dung ra file đích</td><td>Bóc hàng khỏi thùng, xếp lên kệ</td></tr>
+</table>
+<p class="warn en">⚠ Without <code>-f</code> → it easily hits the <code>OFFLINE</code> state, only querying the cache instead of
+downloading fresh. Without <code>-split</code> → the output file may have the wrong binary content.</p>
+<p class="warn vi">⚠ Thiếu <code>-f</code> → dễ dính trạng thái <code>OFFLINE</code>, chỉ tra cache chứ không tải mới.
+Thiếu <code>-split</code> → file đầu ra có thể sai nội dung nhị phân.</p>
+
+<h2 id="bt"><span class="en">5. Blue-team view</span><span class="vi">5. Góc blue team</span></h2>
+<div class="card sec">
+  <h3 class="en">Why certutil deserves monitoring</h3>
+  <h3 class="vi">Vì sao certutil đáng được giám sát</h3>
+  <p class="en">Because it is <b>signed by Microsoft</b> and present on every machine, certutil is in the
+  <b>LOLBAS</b> catalogue (Living Off the Land Binaries) — legitimate binaries that defenders need to watch for
+  abnormal behaviour, since they can reach the network / encode-decode without installing anything.</p>
+  <p class="vi">Vì là file <b>có chữ ký Microsoft</b> và có mặt trên mọi máy, certutil nằm trong danh mục
+  <b>LOLBAS</b> (Living Off the Land Binaries) — những binary hợp lệ mà phía phòng thủ cần theo dõi
+  hành vi bất thường, vì chúng có khả năng gọi mạng / mã hóa-giải mã mà không cần cài thêm gì.</p>
+  <div class="analogy en">
+    <b>Analogy:</b> A kitchen knife — a legitimate tool, but if it shows up somewhere odd (certutil pulling an
+    unknown file from the internet into <code>%TEMP%</code>) that's a signal to investigate.
+  </div>
+  <div class="analogy vi">
+    <b>Ví von:</b> Con dao trong bếp — dụng cụ hợp pháp, nhưng nếu xuất hiện ở chỗ lạ (certutil đang
+    kéo file lạ từ internet về <code>%TEMP%</code>) thì đó là tín hiệu để điều tra.
+  </div>
+</div>
+<div class="card blue">
+  <h3 class="en">Signs to detect</h3>
+  <h3 class="vi">Dấu hiệu cần phát hiện</h3>
+  <ul>
+    <li class="en">Process <code>certutil.exe</code> with a parameter containing <code>urlcache</code> + <code>http://</code> / <code>https://</code></li>
+    <li class="vi">Process <code>certutil.exe</code> có tham số chứa <code>urlcache</code> + <code>http://</code> / <code>https://</code></li>
+    <li class="en">Accompanied by a network connection (<b>Sysmon Event ID 3</b>) to an unfamiliar address</li>
+    <li class="vi">Kèm network connection (<b>Sysmon Event ID 3</b>) tới địa chỉ lạ</li>
+    <li class="en">An unusual parent process (<code>winword.exe</code>, <code>powershell.exe</code>...)</li>
+    <li class="vi">Process cha bất thường (<code>winword.exe</code>, <code>powershell.exe</code>...)</li>
+    <li class="en">Output file written to <code>%TEMP%</code>, <code>%APPDATA%</code>, <code>C:\Users\Public</code></li>
+    <li class="vi">File đầu ra ghi vào <code>%TEMP%</code>, <code>%APPDATA%</code>, <code>C:\Users\Public</code></li>
+  </ul>
+  <p class="en"><b>MITRE ATT&amp;CK:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1140</code> (Deobfuscate/Decode Files).</p>
+  <p class="vi"><b>MITRE ATT&amp;CK:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1140</code> (Deobfuscate/Decode Files).</p>
+  <p class="en"><b>Forensic artifact:</b> certutil leaves a cached copy at
+  <code>%LOCALAPPDATA%\Microsoft\Windows\INetCache\...</code> — even if the output file is deleted,
+  the cached copy may remain for tracing.</p>
+  <p class="vi"><b>Artifact forensic:</b> certutil để lại bản cache tại
+  <code>%LOCALAPPDATA%\Microsoft\Windows\INetCache\...</code> — kể cả khi file đích bị xóa,
+  bản cache vẫn có thể còn để truy ngược.</p>
+</div>
+
+<h2 id="khi"><span class="en">6. When to use certutil</span><span class="vi">6. Khi nào nên dùng certutil</span></h2>
+<table class="en">
+  <tr><th>Situation</th><th>Is certutil a good fit?</th></tr>
+  <tr><td>Only have CMD, not fluent in PowerShell syntax</td><td><span class="pill ok">FIT</span> Runs straight from cmd.exe, built in</td></tr>
+  <tr><td>Need to hash-check file integrity quickly</td><td><span class="pill ok">FIT</span> <code>-hashfile</code> is compact, nothing to install</td></tr>
+  <tr><td>Need to view / verify / convert certificates</td><td><span class="pill ok">FIT</span> This is its native job</td></tr>
+  <tr><td>Need complex logic, variables, loops, JSON handling</td><td><span class="pill no">WEAK</span> PowerShell IWR is far stronger</td></tr>
+  <tr><td>Need headers, auth, proxy when downloading</td><td><span class="pill no">WEAK</span> IWR is much more flexible</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Tình huống</th><th>certutil có hợp không?</th></tr>
+  <tr><td>Chỉ có CMD, chưa quen cú pháp PowerShell</td><td><span class="pill ok">HỢP</span> Chạy thẳng từ cmd.exe, có sẵn</td></tr>
+  <tr><td>Cần tính hash kiểm tra toàn vẹn file nhanh</td><td><span class="pill ok">HỢP</span> <code>-hashfile</code> gọn, không cài gì</td></tr>
+  <tr><td>Cần xem / kiểm tra / đổi định dạng chứng chỉ</td><td><span class="pill ok">HỢP</span> Đây là nghề gốc của nó</td></tr>
+  <tr><td>Cần logic phức tạp, biến, vòng lặp, xử lý JSON</td><td><span class="pill no">KÉM</span> PowerShell IWR mạnh hơn hẳn</td></tr>
+  <tr><td>Cần header, auth, proxy khi tải</td><td><span class="pill no">KÉM</span> IWR linh hoạt hơn nhiều</td></tr>
+</table>
+<p class="en">👉 See the companion page <b>IWR (Invoke-WebRequest)</b> for a full comparison.</p>
+<p class="vi">👉 Xem trang song song <b>IWR (Invoke-WebRequest)</b> để đối chiếu đầy đủ.</p>
+
+<footer>
+  <span class="en">Reference page for learning · for sandbox labs (TryHackMe) &amp; authorised environments ·
+  Run any file-download example only on machines you own or are permitted to use.</span>
+  <span class="vi">Trang tra cứu học tập · dành cho lab sandbox (TryHackMe) &amp; môi trường được phép ·
+  Mọi lệnh tải file minh họa chỉ nên chạy trên máy bạn sở hữu hoặc có quyền.</span>
+</footer>
+</div>
+
+<script>
+  function setLang(l){
+    document.documentElement.lang=l;
+    try{localStorage.setItem('ref-lang',l);}catch(e){}
+    document.querySelectorAll('.lang button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.lang===l ? 'true':'false');
+    });
+  }
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('ref-theme',t);}catch(e){}
+    document.querySelectorAll('.theme button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.theme===t ? 'true':'false');
+    });
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){setLang(b.dataset.lang);});
+  });
+  document.querySelectorAll('.theme button').forEach(function(b){
+    b.addEventListener('click',function(){setTheme(b.dataset.theme);});
+  });
+  setLang(document.documentElement.lang);
+  setTheme(document.documentElement.getAttribute('data-theme')||'dark');
+</script>
+</body>
+</html>

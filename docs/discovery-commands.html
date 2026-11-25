@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discovery Commands – Threat Actor Cheat Sheet</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161d26; --panel2:#1c2531; --line:#2a3646;
+    --text:#e6edf3; --muted:#8b98a8; --accent:#4fd1c5; --thm:#c2f970;
+    --cmd:#f6c453; --ps:#5aa9ff; --linux:#ff8a65; --mac:#c792ea;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:26px;margin:0 0 6px}
+  .sub{color:var(--muted);margin:0 0 18px}
+  .intro{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--accent);
+    border-radius:10px;padding:14px 18px;margin-bottom:20px}
+  .intro p{margin:6px 0}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px;font-size:13.5px}
+  .flow span{background:var(--panel2);border:1px solid var(--line);padding:5px 10px;border-radius:999px}
+  .flow b{color:var(--accent)}
+  .toolbar{position:sticky;top:0;z-index:5;background:rgba(15,20,25,.95);backdrop-filter:blur(6px);
+    padding:12px 0;border-bottom:1px solid var(--line);margin-bottom:18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--text);
+    padding:6px 12px;border-radius:999px;font-size:13.5px;user-select:none}
+  .chip.on{border-color:var(--accent);background:#173a3a}
+  .chip .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  input[type=search]{flex:1;min-width:200px;background:var(--panel);border:1px solid var(--line);
+    color:var(--text);padding:8px 12px;border-radius:8px;font-size:14px}
+  .count{color:var(--muted);font-size:13px}
+  .cat{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:18px;overflow:hidden}
+  .cat-head{padding:14px 18px;border-bottom:1px solid var(--line);background:var(--panel2)}
+  .cat-head h2{margin:0;font-size:18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .mitre{font-size:12px;font-weight:600;color:var(--accent);border:1px solid var(--accent);
+    padding:1px 8px;border-radius:6px;text-decoration:none}
+  .why{margin:6px 0 0;color:var(--muted);font-size:14px}
+  table{width:100%;border-collapse:collapse}
+  th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;background:#131a22}
+  tr:last-child td{border-bottom:none}
+  td.sys{white-space:nowrap;width:120px}
+  td.c{width:45%}
+  code{font:13.5px/1.45 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+    background:#0b1015;border:1px solid var(--line);padding:3px 7px;border-radius:6px;
+    display:inline-block;word-break:break-all;color:#e8f0f8}
+  .copy{margin-left:6px;cursor:pointer;background:none;border:1px solid var(--line);color:var(--muted);
+    border-radius:5px;font-size:11px;padding:2px 6px;vertical-align:middle}
+  .copy:hover{color:var(--text);border-color:var(--accent)}
+  .badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:5px;color:#111}
+  .b-cmd{background:var(--cmd)} .b-ps{background:var(--ps)} .b-linux{background:var(--linux)} .b-mac{background:var(--mac)}
+  .tag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;vertical-align:middle}
+  .t-thm{background:var(--thm);color:#111}
+  .t-adm{background:#ff6b6b;color:#111}
+  .t-dom{background:#7aa2f7;color:#111}
+  .note{color:#c9d4df;font-size:14px}
+  .detect{padding:10px 18px;font-size:13.5px;color:#cfe9e6;background:#11231f;border-top:1px solid var(--line)}
+  .detect b{color:var(--accent)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:var(--muted);margin:-6px 0 18px}
+  .hunt{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 20px;margin-top:26px}
+  .hunt h2{margin:0 0 8px;font-size:18px}
+  .hunt li{margin:5px 0}
+  .empty{display:none;text-align:center;color:var(--muted);padding:40px}
+  footer{margin-top:30px;color:var(--muted);font-size:12.5px}
+  footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Discovery Commands — Threat Actor dùng để “định vị” hệ thống</h1>
+  <p class="sub">MITRE ATT&amp;CK Tactic TA0007 · Tham chiếu: TryHackMe – Windows Threat Detection 2 (Task 2: Discovery Overview)</p>
+
+  <div class="intro">
+    <p><b>Hình dung:</b> Kẻ tấn công vừa lọt vào máy giống như một người bị bịt mắt đưa vào một căn nhà lạ. Việc đầu tiên không phải là lấy đồ, mà là <b>sờ tường, đếm phòng, nghe xem có ai ở nhà và có camera không</b>. Discovery chính là bước “sờ tường” đó.</p>
+    <p>Malware sau khi chạy (từ file đính kèm phishing, LNK…) thường tự động chạy một loạt lệnh Discovery, gửi kết quả về C2, rồi quyết định tiếp tục hay tự xoá (ví dụ: gặp antivirus lạ, nạn nhân không thuộc công ty hoặc quốc gia mục tiêu). Sau đó người điều khiển có thể gõ thêm lệnh thủ công.</p>
+    <div class="flow">
+      <span>Tôi là ai? <b>Users &amp; Groups</b></span>→
+      <span>Đang ở máy nào? <b>System &amp; OS</b></span>→
+      <span>Có gì đáng lấy? <b>Apps / Files</b></span>→
+      <span>Có thuộc mạng công ty? <b>Network / Domain</b></span>→
+      <span>Có bị theo dõi? <b>AV / EDR / Sandbox</b></span>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="chip on" data-sys="all">Tất cả</span>
+    <span class="chip on" data-sys="cmd"><i class="dot" style="background:var(--cmd)"></i>Windows CMD</span>
+    <span class="chip on" data-sys="ps"><i class="dot" style="background:var(--ps)"></i>PowerShell</span>
+    <span class="chip on" data-sys="linux"><i class="dot" style="background:var(--linux)"></i>Linux</span>
+    <span class="chip on" data-sys="mac"><i class="dot" style="background:var(--mac)"></i>macOS</span>
+    <span class="chip" id="thmOnly"><i class="dot" style="background:var(--thm)"></i>Chỉ lệnh trong room THM</span>
+    <input type="search" id="q" placeholder="Tìm lệnh, ví dụ: whoami, netstat, domain…">
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="legend">
+    <span><span class="tag t-thm">THM</span> có trong bảng của room</span>
+    <span><span class="tag t-adm">ADMIN</span> cần quyền admin/root để có kết quả đầy đủ</span>
+    <span><span class="tag t-dom">DOMAIN</span> chỉ có ý nghĩa khi máy join Active Directory</span>
+  </div>
+
+  <div id="list"></div>
+  <div class="empty" id="empty">Không có lệnh nào khớp bộ lọc.</div>
+
+  <div class="hunt">
+    <h2>🔎 Góc Blue Team: phát hiện Discovery thế nào?</h2>
+    <ul>
+      <li><b>Nguồn log:</b> Sysmon Event ID 1 (Process Create) hoặc Security Event ID 4688 (bật “Include command line in process creation events”); PowerShell Event ID 4104 (Script Block Logging); Linux: auditd <code>execve</code>, bash history.</li>
+      <li><b>Từng lệnh riêng lẻ gần như vô hại</b>: admin cũng gõ <code>ipconfig</code> hằng ngày. Dấu hiệu thật là <b>cụm lệnh</b>: nhiều lệnh Discovery khác nhau chạy liên tiếp trong vài giây đến vài phút từ cùng một tiến trình cha.</li>
+      <li><b>Tiến trình cha bất thường:</b> <code>cmd.exe</code>/<code>powershell.exe</code> sinh ra từ <code>explorer.exe</code> qua file LNK, từ Office (<code>WINWORD.EXE</code>), từ file <code>.com/.scr</code> trong thư mục Downloads/Temp/ProgramData.</li>
+      <li><b>Ngữ cảnh người dùng:</b> nhân viên kế toán chạy <code>nltest /domain_trusts</code> hay <code>whoami /priv</code> là rất lạ; tài khoản service chạy <code>whoami</code> cũng đáng nghi.</li>
+      <li><b>Truy vấn gợi ý (Sysmon):</b> lọc EventID=1 với Image/CommandLine chứa <code>whoami|systeminfo|net.exe|net1.exe|nltest|tasklist|ipconfig|netstat|SecurityCenter2</code>, rồi group theo ParentProcessGuid và cửa sổ thời gian ngắn.</li>
+    </ul>
+  </div>
+
+  <footer>
+    Tham chiếu chính: <a href="https://tryhackme.com/room/windowsthreatdetection2" target="_blank" rel="noopener">TryHackMe – Windows Threat Detection 2</a> (bảng Discovery Commands, Task 2).
+    Các lệnh mở rộng và mã kỹ thuật dựa trên <a href="https://attack.mitre.org/tactics/TA0007/" target="_blank" rel="noopener">MITRE ATT&amp;CK – Discovery (TA0007)</a>.
+    Tài liệu học tập phục vụ phát hiện và phòng thủ; chỉ thực hành trên máy lab được phép.
+  </footer>
+</div>
+
+<script>
+const r = String.raw;
+const DATA = [
+  {
+    name:"Users & Groups — Tôi là ai, có quyền gì?",
+    mitre:["T1033","T1087","T1069"],
+    why:"Xác định ai đang dùng máy, tài khoản hiện tại có phải admin không, còn những tài khoản/nhóm nào khác để leo quyền hoặc di chuyển ngang.",
+    detect:"<b>Phát hiện:</b> <code>whoami</code> ngay sau khi một tiến trình lạ khởi chạy là dấu hiệu kinh điển. <code>net.exe</code> luôn gọi thêm <code>net1.exe</code>, nên hãy tìm cả hai.",
+    cmds:[
+      {sys:"cmd",c:"whoami",n:"Tên user + máy hiện tại",thm:1},
+      {sys:"cmd",c:"whoami /priv",n:"Các privilege (SeDebugPrivilege, SeImpersonate…) → khả năng leo quyền"},
+      {sys:"cmd",c:"whoami /groups",n:"Nhóm của user, mức integrity (Medium/High)"},
+      {sys:"cmd",c:"net user",n:"Danh sách tài khoản local",thm:1},
+      {sys:"cmd",c:"net localgroup",n:"Danh sách nhóm local",thm:1},
+      {sys:"cmd",c:"net localgroup administrators",n:"Ai đang là admin của máy"},
+      {sys:"cmd",c:"query user",n:"Ai đang đăng nhập (kể cả phiên RDP)",thm:1},
+      {sys:"cmd",c:"net user /domain",n:"Liệt kê user của domain",dom:1},
+      {sys:"cmd",c:r`net group "Domain Admins" /domain`,n:"Tìm mục tiêu giá trị nhất: Domain Admins",dom:1},
+      {sys:"ps",c:"Get-LocalUser",n:"Danh sách tài khoản local (PowerShell)",thm:1},
+      {sys:"ps",c:"Get-LocalGroupMember Administrators",n:"Thành viên nhóm Administrators"},
+      {sys:"ps",c:r`[Security.Principal.WindowsIdentity]::GetCurrent().Name`,n:"Như whoami nhưng không sinh tiến trình whoami.exe"},
+      {sys:"linux",c:"id",n:"UID, GID và các nhóm (có sudo/wheel/docker không?)"},
+      {sys:"linux",c:"whoami",n:"Tên user hiện tại"},
+      {sys:"linux",c:"cat /etc/passwd",n:"Tất cả tài khoản trên hệ thống"},
+      {sys:"linux",c:"sudo -l",n:"User được chạy lệnh nào với quyền root"},
+      {sys:"linux",c:"w",n:"Ai đang đăng nhập, đang làm gì"},
+      {sys:"linux",c:"last",n:"Lịch sử đăng nhập"},
+      {sys:"mac",c:"dscl . list /Users",n:"Danh sách user local"},
+      {sys:"mac",c:"dscl . read /Groups/admin GroupMembership",n:"Ai thuộc nhóm admin"}
+    ]
+  },
+  {
+    name:"System & OS — Đây là máy gì?",
+    mitre:["T1082"],
+    why:"Biết hệ điều hành, phiên bản, bản vá, phần cứng → chọn exploit phù hợp, đoán vai trò máy (workstation, server, máy ảo phân tích).",
+    detect:"<b>Phát hiện:</b> <code>systeminfo</code> hiếm khi được người dùng thường chạy; xuất hiện cùng <code>whoami</code> và <code>ipconfig</code> trong vài giây là cụm Discovery rõ ràng.",
+    cmds:[
+      {sys:"cmd",c:"systeminfo",n:"OS, build, hotfix đã cài, domain, phần cứng — gói “tất cả trong một”",thm:1},
+      {sys:"cmd",c:"hostname",n:"Tên máy (thường lộ quy ước đặt tên: HN-ACC-PC01, SRV-DC01…)"},
+      {sys:"cmd",c:"ver",n:"Phiên bản Windows"},
+      {sys:"cmd",c:"set",n:"Biến môi trường: USERDOMAIN, LOGONSERVER, PROCESSOR…"},
+      {sys:"ps",c:"Get-ComputerInfo",n:"Thông tin hệ thống chi tiết"},
+      {sys:"ps",c:"Get-HotFix",n:"Các bản vá đã cài → tìm lỗ hổng chưa vá"},
+      {sys:"ps",c:"Get-CimInstance Win32_OperatingSystem",n:"OS, build, thời gian khởi động"},
+      {sys:"linux",c:"uname -a",n:"Kernel, kiến trúc → tìm kernel exploit"},
+      {sys:"linux",c:"cat /etc/os-release",n:"Distro và phiên bản"},
+      {sys:"linux",c:"hostnamectl",n:"Hostname, OS, kernel, có phải VM không"},
+      {sys:"mac",c:"sw_vers",n:"Phiên bản macOS"},
+      {sys:"mac",c:"system_profiler SPSoftwareDataType SPHardwareDataType",n:"Phần mềm hệ thống + phần cứng"}
+    ]
+  },
+  {
+    name:"Processes & Services — Máy đang chạy gì?",
+    mitre:["T1057","T1007"],
+    why:"Tiến trình và service đang chạy cho biết máy dùng vào việc gì, có công cụ bảo mật nào, và có service nào cấu hình sai để leo quyền.",
+    detect:"<b>Phát hiện:</b> <code>tasklist /v</code> hoặc <code>Get-Process</code> chạy từ tiến trình cha lạ; script lọc tên tiến trình EDR (<code>findstr /i \"defender crowdstrike sentinel\"</code>).",
+    cmds:[
+      {sys:"cmd",c:"tasklist /v",n:"Tiến trình + user + tiêu đề cửa sổ",thm:1},
+      {sys:"cmd",c:"tasklist /svc",n:"Service nào chạy trong tiến trình nào"},
+      {sys:"cmd",c:"sc query",n:"Trạng thái các service"},
+      {sys:"cmd",c:"net start",n:"Danh sách service đang chạy"},
+      {sys:"ps",c:"Get-Service",n:"Danh sách service",thm:1},
+      {sys:"ps",c:"Get-Process",n:"Danh sách tiến trình"},
+      {sys:"ps",c:"Get-CimInstance Win32_Process | Select Name,ProcessId,CommandLine",n:"Kèm dòng lệnh (có thể lộ mật khẩu trong tham số)"},
+      {sys:"linux",c:"ps aux",n:"Tất cả tiến trình"},
+      {sys:"linux",c:"systemctl list-units --type=service --state=running",n:"Service đang chạy"},
+      {sys:"mac",c:"ps aux",n:"Tất cả tiến trình"},
+      {sys:"mac",c:"launchctl list",n:"Agent/daemon đang được nạp"}
+    ]
+  },
+  {
+    name:"Installed Software — Có app nào đáng khai thác hay lấy dữ liệu?",
+    mitre:["T1518"],
+    why:"Phần mềm cũ có lỗ hổng, trình duyệt, ứng dụng ngân hàng, VPN client, phần mềm quản lý mật khẩu… đều là mục tiêu đánh cắp dữ liệu.",
+    detect:"<b>Phát hiện:</b> truy vấn WMI <code>Win32_Product</code> chậm và gây Event 1035 (MsiInstaller) hàng loạt — rất ồn, dễ bắt.",
+    cmds:[
+      {sys:"cmd",c:"wmic product get name,version",n:"Danh sách phần mềm cài qua MSI (WMIC đã bị tắt mặc định trên Windows 11 24H2+)",thm:1},
+      {sys:"cmd",c:r`reg query HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall /s`,n:"Phần mềm đã cài qua registry"},
+      {sys:"cmd",c:r`dir "C:\Program Files" "C:\Program Files (x86)"`,n:"Cách thô sơ: xem thư mục cài đặt"},
+      {sys:"ps",c:r`Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Select DisplayName,DisplayVersion`,n:"Phần mềm đã cài (không ồn như Win32_Product)"},
+      {sys:"linux",c:"dpkg -l",n:"Gói đã cài (Debian/Ubuntu)"},
+      {sys:"linux",c:"rpm -qa",n:"Gói đã cài (RHEL/CentOS/Fedora)"},
+      {sys:"mac",c:"ls /Applications",n:"Ứng dụng đã cài"}
+    ]
+  },
+  {
+    name:"Security Software — Có bị “camera” theo dõi không?",
+    mitre:["T1518.001"],
+    why:"Biết antivirus/EDR/firewall đang hoạt động để quyết định tiếp tục, đổi kỹ thuật né tránh hay tự xoá để không bị phát hiện.",
+    detect:"<b>Phát hiện:</b> truy vấn namespace <code>root\\SecurityCenter2</code> gần như không bao giờ do người dùng thường làm → độ tin cậy cao.",
+    cmds:[
+      {sys:"ps",c:r`Get-WmiObject -Namespace "root\SecurityCenter2" -Query "SELECT * FROM AntivirusProduct"`,n:"Antivirus đã đăng ký với Windows Security Center (chỉ có trên client, không có trên Server)",thm:1},
+      {sys:"ps",c:r`Get-CimInstance -Namespace root/SecurityCenter2 -ClassName AntivirusProduct`,n:"Như trên, dạng CIM mới hơn"},
+      {sys:"ps",c:"Get-MpComputerStatus",n:"Trạng thái Microsoft Defender: real-time protection, tamper protection…"},
+      {sys:"ps",c:"Get-MpPreference",n:"Cấu hình Defender, kể cả danh sách exclusion",adm:1},
+      {sys:"cmd",c:"netsh advfirewall show allprofiles",n:"Trạng thái firewall cho Domain/Private/Public (room xếp vào Network Settings)",thm:1},
+      {sys:"cmd",c:"sc query windefend",n:"Service Defender có chạy không"},
+      {sys:"cmd",c:"fltmc",n:"Các minifilter driver, thường lộ tên EDR",adm:1},
+      {sys:"linux",c:"ps aux | grep -Ei 'falcon|sentinel|clamd|osquery|auditd|wazuh'",n:"Tìm agent bảo mật đang chạy"},
+      {sys:"linux",c:"sestatus; aa-status",n:"SELinux / AppArmor có bật không"},
+      {sys:"mac",c:"csrutil status",n:"System Integrity Protection"},
+      {sys:"mac",c:"spctl --status",n:"Gatekeeper có bật không"}
+    ]
+  },
+  {
+    name:"Network Settings — Máy có thuộc mạng công ty không?",
+    mitre:["T1016"],
+    why:"Địa chỉ IP, DNS suffix, gateway, DNS server cho biết máy đang ở mạng nhà hay mạng doanh nghiệp, và dải mạng nào có thể đi tiếp.",
+    detect:"<b>Phát hiện:</b> <code>ipconfig /all</code> + <code>route print</code> + <code>arp -a</code> liên tiếp từ cùng tiến trình cha.",
+    cmds:[
+      {sys:"cmd",c:"ipconfig /all",n:"IP, DNS suffix (corp.local?), DNS server, DHCP",thm:1},
+      {sys:"cmd",c:"route print",n:"Bảng định tuyến → các mạng nội bộ khác"},
+      {sys:"cmd",c:"arp -a",n:"Các máy lân cận vừa liên lạc"},
+      {sys:"cmd",c:"nslookup <domain>",n:"Kiểm tra DNS nội bộ, tìm domain controller"},
+      {sys:"cmd",c:"netsh wlan show profiles",n:"Các mạng Wi-Fi từng kết nối (lộ địa điểm)"},
+      {sys:"ps",c:"Get-NetIPConfiguration",n:"Cấu hình IP (PowerShell)"},
+      {sys:"ps",c:"Get-DnsClientServerAddress",n:"DNS server đang dùng"},
+      {sys:"linux",c:"ip a",n:"Interface và IP"},
+      {sys:"linux",c:"ip route",n:"Bảng định tuyến"},
+      {sys:"linux",c:"cat /etc/resolv.conf",n:"DNS server và search domain"},
+      {sys:"mac",c:"ifconfig",n:"Interface và IP"},
+      {sys:"mac",c:"scutil --dns",n:"Cấu hình DNS"}
+    ]
+  },
+  {
+    name:"Network Connections — Máy đang nói chuyện với ai?",
+    mitre:["T1049"],
+    why:"Kết nối đang mở và port đang lắng nghe cho biết máy kết nối tới server nào (file server, DB, RDP) và có service nào mở ra ngoài.",
+    detect:"<b>Phát hiện:</b> <code>netstat -ano</code> từ tiến trình không phải công cụ admin quen thuộc.",
+    cmds:[
+      {sys:"cmd",c:"netstat -ano",n:"Kết nối + port lắng nghe + PID",thm:1},
+      {sys:"cmd",c:"net use",n:"Ổ mạng đã map (\\\\fileserver\\share)"},
+      {sys:"cmd",c:"net session",n:"Ai đang kết nối vào máy này",adm:1},
+      {sys:"ps",c:"Get-NetTCPConnection -State Established",n:"Kết nối TCP đang mở"},
+      {sys:"linux",c:"ss -tunap",n:"Kết nối và port lắng nghe kèm tiến trình"},
+      {sys:"linux",c:"netstat -tulpn",n:"Port đang lắng nghe (bản cũ)"},
+      {sys:"mac",c:"lsof -i -P -n",n:"Kết nối mạng theo tiến trình"},
+      {sys:"mac",c:"netstat -an",n:"Kết nối và port"}
+    ]
+  },
+  {
+    name:"Domain & Remote Systems — Xung quanh còn máy nào?",
+    mitre:["T1018","T1482","T1135"],
+    why:"Bước chuẩn bị cho lateral movement: tìm domain controller, quan hệ trust giữa các domain, các máy và thư mục chia sẻ trong mạng.",
+    detect:"<b>Phát hiện:</b> <code>nltest</code> và <code>net group ... /domain</code> từ workstation người dùng thường là cảnh báo mức cao (hay gặp trước ransomware).",
+    cmds:[
+      {sys:"cmd",c:"echo %USERDOMAIN% %LOGONSERVER%",n:"Máy có join domain không, DC nào xác thực"},
+      {sys:"cmd",c:"nltest /dclist:<domain>",n:"Danh sách domain controller",dom:1},
+      {sys:"cmd",c:"nltest /domain_trusts",n:"Quan hệ trust giữa các domain",dom:1},
+      {sys:"cmd",c:"net view",n:"Các máy trong mạng (cần SMB browsing)"},
+      {sys:"cmd",c:"net view \\\\<host>",n:"Thư mục chia sẻ trên một máy"},
+      {sys:"cmd",c:"net share",n:"Thư mục chia sẻ trên chính máy này"},
+      {sys:"ps",c:"Get-ADComputer -Filter * | Select Name",n:"Mọi máy trong AD (cần RSAT/AD module)",dom:1},
+      {sys:"ps",c:"Get-SmbShare",n:"Share trên máy hiện tại"},
+      {sys:"linux",c:"cat /etc/hosts",n:"Host được khai báo tĩnh"},
+      {sys:"linux",c:"realm list",n:"Máy Linux có join AD không",dom:1},
+      {sys:"mac",c:"dsconfigad -show",n:"Mac có bind vào AD không",dom:1}
+    ]
+  },
+  {
+    name:"Files & Folders — Máy dùng để làm gì, nạn nhân là ai?",
+    mitre:["T1083"],
+    why:"Nội dung thư mục Desktop, Documents, Downloads tiết lộ công việc, mối quan tâm và dữ liệu giá trị của nạn nhân (bước đệm cho Collection).",
+    detect:"<b>Phát hiện:</b> duyệt đệ quy toàn ổ đĩa, tìm phần mở rộng nhạy cảm (<code>*.kdbx</code>, <code>*.pst</code>, <code>*.config</code>) từ tiến trình lạ.",
+    cmds:[
+      {sys:"cmd",c:"dir <folder>",n:"Liệt kê thư mục",thm:1},
+      {sys:"cmd",c:"type <file>",n:"Đọc nội dung file",thm:1},
+      {sys:"cmd",c:r`dir /s /b C:\Users\*.docx`,n:"Tìm đệ quy theo phần mở rộng"},
+      {sys:"cmd",c:r`tree /f C:\Users\<user>`,n:"Cây thư mục đầy đủ"},
+      {sys:"ps",c:"Get-ChildItem <folder>",n:"Liệt kê thư mục",thm:1},
+      {sys:"ps",c:"Get-Content <file>",n:"Đọc nội dung file",thm:1},
+      {sys:"ps",c:r`Get-ChildItem C:\Users -Recurse -Include *.xlsx,*.pdf -ErrorAction SilentlyContinue`,n:"Tìm file theo loại"},
+      {sys:"linux",c:"ls -la ~",n:"File trong home (kể cả file ẩn: .ssh, .bash_history)"},
+      {sys:"linux",c:"find / -name '*.conf' 2>/dev/null",n:"Tìm file cấu hình"},
+      {sys:"linux",c:"cat <file>",n:"Đọc file"},
+      {sys:"mac",c:"ls -la ~/Documents ~/Desktop",n:"Tài liệu của người dùng"},
+      {sys:"mac",c:"mdfind 'kMDItemDisplayName == *.pdf'",n:"Tìm file qua Spotlight index"}
+    ]
+  },
+  {
+    name:"Location, Language & Time — Nạn nhân ở quốc gia nào?",
+    mitre:["T1614","T1124"],
+    why:"Nhiều malware kiểm tra ngôn ngữ, bàn phím, múi giờ để tránh lây nhiễm ở một số quốc gia, hoặc chỉ tấn công đúng khu vực mục tiêu (đúng ý “không phải quốc gia mục tiêu thì tự xoá” trong room).",
+    detect:"<b>Phát hiện:</b> truy vấn locale/keyboard layout ngay sau khi tiến trình mới khởi chạy, đặc biệt khi đi kèm việc tự xoá file.",
+    cmds:[
+      {sys:"cmd",c:"tzutil /g",n:"Múi giờ hiện tại"},
+      {sys:"cmd",c:r`reg query "HKCU\Keyboard Layout\Preload"`,n:"Bố cục bàn phím đã cài"},
+      {sys:"cmd",c:"net time",n:"Giờ hệ thống / máy chủ thời gian (thường là DC)"},
+      {sys:"ps",c:"Get-WinSystemLocale",n:"Locale hệ thống"},
+      {sys:"ps",c:"Get-Culture; Get-WinUserLanguageList",n:"Ngôn ngữ người dùng"},
+      {sys:"ps",c:"Get-TimeZone",n:"Múi giờ"},
+      {sys:"linux",c:"locale",n:"Ngôn ngữ / vùng"},
+      {sys:"linux",c:"timedatectl",n:"Múi giờ, NTP"},
+      {sys:"mac",c:"defaults read -g AppleLocale",n:"Locale người dùng"},
+      {sys:"mac",c:"systemsetup -gettimezone",n:"Múi giờ",adm:1}
+    ]
+  },
+  {
+    name:"Virtualization / Sandbox Checks — Đây có phải máy phân tích không?",
+    mitre:["T1497.001"],
+    why:"Malware kiểm tra xem có đang chạy trong máy ảo/sandbox của analyst không; nếu có thì “giả chết” để không lộ hành vi thật.",
+    detect:"<b>Phát hiện:</b> truy vấn Manufacturer/Model, BIOS hoặc tìm tiến trình VMware/VirtualBox ngay sau khi file lạ được mở.",
+    cmds:[
+      {sys:"cmd",c:r`systeminfo | findstr /i "Manufacturer Model"`,n:"VMware, VirtualBox, QEMU, Hyper-V…"},
+      {sys:"ps",c:"Get-CimInstance Win32_ComputerSystem | Select Manufacturer,Model",n:"Nhà sản xuất / model máy"},
+      {sys:"ps",c:"Get-CimInstance Win32_BIOS",n:"BIOS (chuỗi VBOX, VMware…)"},
+      {sys:"cmd",c:r`tasklist | findstr /i "vmtoolsd vboxservice"`,n:"Guest tools của máy ảo"},
+      {sys:"linux",c:"systemd-detect-virt",n:"Trả về kvm, vmware, oracle… hoặc none"},
+      {sys:"linux",c:"cat /sys/class/dmi/id/product_name",n:"Tên sản phẩm phần cứng"},
+      {sys:"mac",c:"sysctl -n machdep.cpu.brand_string; ioreg -l | grep -i vmware",n:"CPU / dấu vết VMware"}
+    ]
+  }
+];
+
+const SYS = {cmd:["Windows CMD","b-cmd"], ps:["PowerShell","b-ps"], linux:["Linux","b-linux"], mac:["macOS","b-mac"]};
+const active = new Set(["cmd","ps","linux","mac"]);
+let thmOnly = false;
+
+function el(tag, cls, txt){const e=document.createElement(tag); if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e;}
+
+function render(){
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const list = document.getElementById("list"); list.innerHTML="";
+  let total=0;
+  DATA.forEach(cat=>{
+    const rows = cat.cmds.filter(x=>active.has(x.sys) && (!thmOnly||x.thm) &&
+      (!q || (x.c+" "+x.n+" "+cat.name+" "+cat.mitre.join(" ")).toLowerCase().includes(q)));
+    if(!rows.length) return;
+    total += rows.length;
+    const box = el("section","cat");
+    const head = el("div","cat-head");
+    const h2 = el("h2"); h2.appendChild(document.createTextNode(cat.name));
+    cat.mitre.forEach(m=>{const a=el("a","mitre",m); a.href="https://attack.mitre.org/techniques/"+m.replace(".","/")+"/"; a.target="_blank"; a.rel="noopener"; h2.appendChild(a);});
+    head.appendChild(h2); head.appendChild(el("p","why",cat.why)); box.appendChild(head);
+    const t = el("table"); const th = el("tr");
+    ["Hệ thống","Câu lệnh","Attacker biết được gì"].forEach(s=>th.appendChild(el("th",null,s)));
+    t.appendChild(th);
+    rows.forEach(x=>{
+      const tr=el("tr");
+      const s=el("td","sys"); s.appendChild(el("span","badge "+SYS[x.sys][1],SYS[x.sys][0])); tr.appendChild(s);
+      const c=el("td","c"); c.appendChild(el("code",null,x.c));
+      const b=el("button","copy","copy"); b.onclick=()=>{navigator.clipboard?.writeText(x.c).then(()=>{b.textContent="✓";setTimeout(()=>b.textContent="copy",1200);}).catch(()=>{});};
+      c.appendChild(b); tr.appendChild(c);
+      const n=el("td","note",x.n);
+      if(x.thm) n.appendChild(el("span","tag t-thm","THM"));
+      if(x.adm) n.appendChild(el("span","tag t-adm","ADMIN"));
+      if(x.dom) n.appendChild(el("span","tag t-dom","DOMAIN"));
+      tr.appendChild(n); t.appendChild(tr);
+    });
+    box.appendChild(t);
+    const d=el("div","detect"); d.innerHTML=cat.detect; box.appendChild(d);
+    list.appendChild(box);
+  });
+  document.getElementById("count").textContent = total+" lệnh";
+  document.getElementById("empty").style.display = total? "none":"block";
+}
+
+document.querySelectorAll(".chip[data-sys]").forEach(ch=>{
+  ch.onclick=()=>{
+    const s=ch.dataset.sys;
+    if(s==="all"){ const allOn = active.size===4; ["cmd","ps","linux","mac"].forEach(k=> allOn? active.delete(k): active.add(k)); }
+    else { active.has(s)? active.delete(s): active.add(s); }
+    document.querySelectorAll(".chip[data-sys]").forEach(c=>{
+      const k=c.dataset.sys; c.classList.toggle("on", k==="all"? active.size===4 : active.has(k));
+    });
+    render();
+  };
+});
+document.getElementById("thmOnly").onclick=e=>{thmOnly=!thmOnly; e.currentTarget.classList.toggle("on",thmOnly); render();};
+document.getElementById("q").oninput=render;
+render();
+</script>
+</body>
+</html>

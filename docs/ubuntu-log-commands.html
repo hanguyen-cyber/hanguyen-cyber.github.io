@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ubuntu Log Command Explainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Bố cục: ô phân tích câu lệnh ở trên cùng → tra cứu tham số → công thức lọc log hay dùng */
+  --bg:#eef1f3; --surface:#ffffff; --ink:#17202a; --muted:#59646f; --line:#d3d9df;
+  --accent:#0f6b6b; --accent-ink:#ffffff; --code-bg:#f4f6f8;
+  --k-cmd:#0f6b6b; --k-opt:#6b3fb0; --k-val:#9a5a00; --k-pat:#2b7a33; --k-file:#1f5fa3; --k-op:#b42350; --k-redir:#b5560f; --k-env:#5b6470; --k-unk:#c0262d;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1317; --surface:#161d23; --ink:#e1e7ec; --muted:#8e9aa6; --line:#29333c;
+    --accent:#4fc1bd; --accent-ink:#06201f; --code-bg:#10161b;
+    --k-cmd:#4fc1bd; --k-opt:#b39bf0; --k-val:#e7ac4f; --k-pat:#7fcf7a; --k-file:#79aef0; --k-op:#f07ca0; --k-redir:#f09a5a; --k-env:#9aa5b1; --k-unk:#ff7b7b;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1317; --surface:#161d23; --ink:#e1e7ec; --muted:#8e9aa6; --line:#29333c;
+  --accent:#4fc1bd; --accent-ink:#06201f; --code-bg:#10161b;
+  --k-cmd:#4fc1bd; --k-opt:#b39bf0; --k-val:#e7ac4f; --k-pat:#7fcf7a; --k-file:#79aef0; --k-op:#f07ca0; --k-redir:#f09a5a; --k-env:#9aa5b1; --k-unk:#ff7b7b;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--sans)}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 18px 60px;display:grid;gap:20px}
+header h1{font:700 25px/1.2 var(--sans);margin:0;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:6px 0 0;color:var(--muted);max-width:72ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:grid;gap:14px;min-width:0}
+h2{font:600 17px var(--sans);margin:0;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+h2 small{font:400 13px var(--sans);color:var(--muted)}
+h3{font:600 15px var(--sans);margin:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+textarea,input[type="search"]{width:100%;font:14px/1.6 var(--mono);background:var(--code-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+textarea{resize:vertical;min-height:74px}
+input[type="search"]{font-family:var(--sans);font-size:15px}
+button{font:500 13px var(--sans);border-radius:7px;border:1px solid var(--line);background:var(--surface);color:var(--ink);padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button.link{border:none;background:none;padding:2px 4px;color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.hint{font-size:13px;color:var(--muted);margin:0}
+code{font-family:var(--mono);font-size:.9em;background:var(--code-bg);border:1px solid var(--line);border-radius:4px;padding:0 4px;word-break:break-word}
+
+/* Dải token */
+.strip{font:14px/2.1 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:8px;padding:8px 12px;overflow-x:auto;white-space:pre-wrap;word-break:break-all}
+.tk{border-bottom:2px solid currentColor;padding:1px 2px;border-radius:3px;cursor:default}
+.k-cmd{color:var(--k-cmd);font-weight:600}.k-opt{color:var(--k-opt)}.k-val{color:var(--k-val)}.k-pat{color:var(--k-pat)}
+.k-file{color:var(--k-file)}.k-op{color:var(--k-op);font-weight:600}.k-redir{color:var(--k-redir);font-weight:600}
+.k-env{color:var(--k-env)}.k-unk{color:var(--k-unk);border-bottom-style:dashed}.k-arg{color:var(--ink)}
+.hl{background:color-mix(in srgb,currentColor 16%,transparent)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted)}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;background:currentColor;margin-right:5px;vertical-align:-1px}
+
+/* Luồng pipeline */
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.fstep{border:1px solid var(--line);border-left:3px solid var(--k-cmd);border-radius:7px;padding:5px 10px;font-size:13.5px;background:var(--surface)}
+.fstep b{font-family:var(--mono);color:var(--k-cmd)}
+.fjoin{font-size:12px;color:var(--k-op);font-family:var(--mono)}
+.fjoin::before{content:"→ "}
+
+.steps{display:grid;gap:12px}
+.step{border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.step-h{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:9px 12px;background:var(--code-bg);border-bottom:1px solid var(--line)}
+.step-h .n{font:600 12px var(--mono);color:var(--muted)}
+.step-h .c{font:600 15px var(--mono);color:var(--k-cmd)}
+.step-h .s{font-size:13.5px;color:var(--muted)}
+.step-h .j{font:500 12px var(--mono);color:var(--k-op)}
+table{border-collapse:collapse;width:100%}
+.xt td{padding:8px 12px;border-top:1px solid var(--line);vertical-align:top;font-size:14px}
+.xt tr:first-child td{border-top:none}
+.xt td.t{width:1%;white-space:nowrap;font:13.5px var(--mono)}
+.xt td.t span{border-bottom:2px solid currentColor;padding:0 2px}
+.xt ul{margin:6px 0 0;padding-left:18px}
+.xt li{margin:2px 0}
+.warn{color:var(--k-unk)}
+
+/* Tra cứu */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{border-radius:999px;font-size:13px;padding:5px 12px}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.results{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,520px),1fr));gap:14px;align-items:start}
+.cmd{border:1px solid var(--line);border-radius:9px;background:var(--surface);display:grid;min-width:0}
+.cmd-h{padding:12px 14px;display:grid;gap:4px}
+.cmd-h .name{font:600 17px var(--mono);color:var(--k-cmd)}
+.cmd-h .cat{font-size:12px;color:var(--muted)}
+.cmd-h p{margin:0;font-size:14px}
+.cmd-h .syn{font:13px var(--mono);color:var(--muted)}
+.opts{border-top:1px solid var(--line)}
+.ot td{padding:7px 14px;border-top:1px solid var(--line);vertical-align:top;font-size:14px}
+.ot tr:first-child td{border-top:none}
+.ot td.f{white-space:nowrap;width:1%;font:13px var(--mono);color:var(--k-opt)}
+.ot td.f i{font-style:normal;color:var(--k-val)}
+.ot td.f div+div{color:var(--muted)}
+.exs{border-top:1px solid var(--line);padding:10px 14px;display:grid;gap:8px}
+.ex{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;align-items:start}
+.ex code{display:block;font-size:12.5px;padding:4px 8px;white-space:pre-wrap;word-break:break-all}
+.ex .d{grid-column:1/2;font-size:13px;color:var(--muted)}
+.more{padding:8px 14px;border-top:1px solid var(--line)}
+mark{background:color-mix(in srgb,var(--k-val) 28%,transparent);color:inherit;border-radius:2px}
+.empty{color:var(--muted);font-size:14px;padding:6px 2px}
+
+/* Công thức */
+.recipes{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,360px),1fr));gap:12px}
+.rc{border:1px solid var(--line);border-radius:9px;padding:12px 14px;display:grid;gap:8px;align-content:start}
+.rc h3{font-size:14.5px}
+.rc p{margin:0;font-size:13.5px;color:var(--muted)}
+.rc code{display:block;font-size:12.5px;padding:6px 8px;white-space:pre-wrap;word-break:break-all}
+@media (prefers-reduced-motion:no-preference){button{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ubuntu Log Command Explainer</h1>
+    <p>Dán một câu lệnh lọc log để xem ý nghĩa từng tham số, hoặc tra cứu tham số của các lệnh hay dùng khi điều tra log trên Ubuntu.</p>
+  </header>
+
+  <section class="card" aria-labelledby="h-x">
+    <h2 id="h-x">Phân tích câu lệnh <small>Ctrl + Enter để phân tích, hỗ trợ pipe |, &amp;&amp;, chuyển hướng &gt;, sudo, xargs, find -exec</small></h2>
+    <textarea id="cmdIn" spellcheck="false" aria-label="Câu lệnh cần phân tích"></textarea>
+    <div class="row">
+      <button class="primary" type="button" id="xBtn">Phân tích</button>
+      <button type="button" id="xClear">Xóa</button>
+      <button type="button" id="xCopy">Copy lệnh</button>
+      <span class="hint" id="xStatus" aria-live="polite"></span>
+    </div>
+    <div class="legend" aria-hidden="true">
+      <span class="k-cmd">lệnh</span><span class="k-opt">tham số</span><span class="k-val">giá trị</span><span class="k-pat">mẫu / chương trình</span><span class="k-file">file</span><span class="k-op">pipe, &amp;&amp;</span><span class="k-redir">chuyển hướng</span><span class="k-unk">không nhận ra</span>
+    </div>
+    <div id="xOut" class="steps"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-s">
+    <h2 id="h-s">Tra cứu tham số <small>gõ tên lệnh, tham số hoặc mô tả, có dấu hay không dấu đều được</small></h2>
+    <input type="search" id="q" placeholder='Ví dụ: grep -v   ·   đếm   ·   theo dõi   ·   tail -F   ·   sort cột' aria-label="Tìm tham số">
+    <div class="chips" id="cats"></div>
+    <div id="sOut"></div>
+  </section>
+
+  <section class="card" aria-labelledby="h-r">
+    <h2 id="h-r">Công thức lọc log hay dùng <small>bấm Phân tích để xem giải thích từng phần</small></h2>
+    <div class="recipes" id="recipes"></div>
+  </section>
+</div>
+
+<script>
+/* ===================== Thư viện lệnh ===================== */
+const o = (f, d, s, a, x) => Object.assign({f: f.split(' '), d, s: s || '', a: a || null}, x || {});
+const CATS = {loc:'Lọc văn bản', tk:'Sắp xếp & thống kê', xem:'Xem file log', sys:'Systemd & kernel', aud:'Audit (auditd)', login:'Đăng nhập', file:'Tìm & kiểm tra file', khac:'Khác'};
+
+const sepName = v => ({' ':'dấu cách','\t':'tab','\\t':'tab','"':'dấu ngoặc kép "',':':'dấu hai chấm',',':'dấu phẩy',';':'dấu chấm phẩy','|':'dấu |','=':'dấu ='}[v] || ('chuỗi <code>' + esc(v) + '</code>'));
+const listCols = v => v.split(',').map(p => /^\d+-\d+$/.test(p) ? 'từ cột ' + p.replace('-', ' đến ') : /^\d+-$/.test(p) ? 'từ cột ' + p.slice(0,-1) + ' đến hết' : /^-\d+$/.test(p) ? 'từ đầu đến cột ' + p.slice(1) : 'cột ' + p).join(', ');
+const daysX = (v, unit) => v.startsWith('+') ? 'sửa đổi cách đây hơn ' + v.slice(1) + ' ' + unit : v.startsWith('-') ? 'sửa đổi trong ' + v.slice(1) + ' ' + unit + ' gần đây' : 'sửa đổi đúng ' + v + ' ' + unit + ' trước';
+const PRIO = {emerg:0,alert:1,crit:2,err:3,warning:4,notice:5,info:6,debug:7};
+const prioX = v => { const n = v.split('..'); const name = x => /^\d$/.test(x) ? Object.keys(PRIO)[+x] : x;
+  if(n.length === 2) return 'chỉ lấy mức từ ' + name(n[0]) + ' đến ' + name(n[1]);
+  const k = name(v); return k in PRIO ? 'lấy mức ' + k + ' (' + PRIO[k] + ') và các mức nghiêm trọng hơn (0 đến ' + PRIO[k] + ')' : 'mức ' + v; };
+const timeX = v => ({today:'từ 0h hôm nay', yesterday:'từ 0h hôm qua', recent:'10 phút gần đây', now:'thời điểm hiện tại', 'this-week':'từ đầu tuần này', 'week-ago':'từ 1 tuần trước', 'this-month':'từ đầu tháng này', 'this-year':'từ đầu năm nay', boot:'từ lần khởi động gần nhất', checkpoint:'từ lần chạy trước (checkpoint)'}[v.split(' ')[0]] || 'thời điểm ' + v);
+
+const GREP_OPTS = [
+  o('-i --ignore-case','Không phân biệt chữ hoa và chữ thường.','không phân biệt hoa thường'),
+  o('-v --invert-match','Đảo ngược: chỉ in những dòng KHÔNG khớp mẫu. Hay dùng để loại bỏ nhiễu.','lấy dòng không khớp'),
+  o('-E --extended-regexp','Dùng regex mở rộng: | + ? ( ) { } có tác dụng mà không cần thêm dấu \\.','regex mở rộng'),
+  o('-F --fixed-strings','Coi mẫu là chuỗi thường, không phải regex. Nhanh và an toàn khi mẫu chứa ký tự đặc biệt như . ? [.','chuỗi cố định'),
+  o('-P --perl-regexp','Regex kiểu Perl: hỗ trợ \\d, \\s, \\w, lookahead.','regex Perl'),
+  o('-w --word-regexp','Chỉ khớp khi mẫu là một từ trọn vẹn (không nằm trong từ khác).','khớp nguyên từ'),
+  o('-x --line-regexp','Chỉ khớp khi mẫu trùng toàn bộ dòng.','khớp nguyên dòng'),
+  o('-c --count','Không in dòng, chỉ in số dòng khớp.','đếm số dòng khớp'),
+  o('-n --line-number','In số thứ tự dòng ở đầu mỗi kết quả.','kèm số dòng'),
+  o('-o --only-matching','Chỉ in phần khớp mẫu thay vì cả dòng. Hữu ích để trích IP, URL.','chỉ in phần khớp'),
+  o('-l --files-with-matches','Chỉ in tên các file có ít nhất một dòng khớp.','liệt kê file khớp'),
+  o('-L --files-without-match','Chỉ in tên các file không có dòng nào khớp.','liệt kê file không khớp'),
+  o('-h --no-filename','Không in tên file ở đầu dòng khi tìm nhiều file.','ẩn tên file'),
+  o('-H --with-filename','Luôn in tên file ở đầu mỗi dòng kết quả.','kèm tên file'),
+  o('-r --recursive','Tìm đệ quy trong mọi file của thư mục.','tìm đệ quy'),
+  o('-R --dereference-recursive','Tìm đệ quy và đi theo cả symlink.','đệ quy theo symlink'),
+  o('-A --after-context','In thêm N dòng phía sau mỗi dòng khớp.','+{v} dòng sau','N'),
+  o('-B --before-context','In thêm N dòng phía trước mỗi dòng khớp.','+{v} dòng trước','N'),
+  o('-C --context','In thêm N dòng trước và sau mỗi dòng khớp.','±{v} dòng ngữ cảnh','N'),
+  o('-m --max-count','Dừng sau khi tìm được N dòng khớp.','tối đa {v} dòng','N'),
+  o('-e --regexp','Chỉ định mẫu. Dùng nhiều lần -e để tìm theo kiểu "hoặc".','mẫu "{v}"','MẪU',{vrole:'pattern'}),
+  o('-f --file','Đọc danh sách mẫu từ file, mỗi dòng một mẫu (ví dụ danh sách IP xấu).','mẫu từ file {v}','FILE'),
+  o('-a --text','Coi file nhị phân như file văn bản (tránh thông báo "Binary file matches").','đọc như text'),
+  o('-s --no-messages','Ẩn thông báo lỗi khi file không tồn tại hoặc không đọc được.','ẩn lỗi'),
+  o('-q --quiet --silent','Không in gì, chỉ trả về mã thoát 0 nếu có khớp. Dùng trong script.','chỉ trả mã thoát'),
+  o('--color --colour','Tô màu phần khớp (always, never, auto).','tô màu','KHI'),
+  o('--line-buffered','Đẩy kết quả ra ngay từng dòng. Cần khi đặt grep sau tail -f để thấy kết quả ngay.','xuất từng dòng ngay'),
+  o('--include','Khi tìm đệ quy, chỉ xét file khớp mẫu glob, ví dụ *.log.','chỉ file {v}','GLOB'),
+  o('--exclude','Khi tìm đệ quy, bỏ qua file khớp mẫu glob.','bỏ file {v}','GLOB'),
+  o('--exclude-dir','Khi tìm đệ quy, bỏ qua thư mục khớp mẫu.','bỏ thư mục {v}','THƯ_MỤC')
+];
+
+const DB = {
+grep:{cat:'loc', sum:'Lọc và in các dòng khớp một mẫu (chuỗi hoặc regex).', syn:'grep [OPTION]... MẪU [FILE]...', pos:['pattern','file*'], kw:'tim loc search filter regex', opts:GREP_OPTS,
+  ex:[['grep -i "failed password" /var/log/auth.log','Các lần đăng nhập SSH sai mật khẩu'],['grep -v "Mozilla" /var/log/apache2/access.log','Request không đến từ trình duyệt thông thường'],['grep -c " 404 " access.log','Đếm số request lỗi 404'],['grep -A3 -B1 "segfault" /var/log/syslog','Xem ngữ cảnh quanh lỗi segfault'],['grep -rn --include="*.php" "shell_exec" /var/www/html','Tìm file PHP có hàm nguy hiểm']]},
+zgrep:{cat:'loc', sum:'Giống grep nhưng đọc được cả file nén .gz (log cũ đã được logrotate nén).', syn:'zgrep [OPTION]... MẪU [FILE.gz]...', pos:['pattern','file*'], kw:'nen gz gzip logrotate', opts:GREP_OPTS,
+  ex:[['zgrep -h "POST /wp-login.php" /var/log/apache2/access.log.*.gz','Tìm brute force trong các log cũ đã nén']]},
+egrep:{cat:'loc', sum:'Cách viết cũ của grep -E (regex mở rộng). Bản mới khuyên dùng grep -E.', syn:'egrep [OPTION]... MẪU [FILE]...', pos:['pattern','file*'], kw:'regex mo rong', opts:GREP_OPTS, ex:[]},
+awk:{cat:'loc', sum:'Xử lý dữ liệu theo cột: tách mỗi dòng thành các trường $1, $2… rồi lọc, in, đếm, cộng.', syn:"awk [-F SEP] 'điều_kiện { hành_động }' [FILE]...", pos:['program','file*'], kw:'cot truong field column dem cong', opts:[
+  o('-F --field-separator','Ký tự (hoặc regex) dùng để tách cột. Mặc định là khoảng trắng.','tách cột bằng {v}','SEP',{vx:v => 'tách cột bằng ' + sepName(v), store:'fs'}),
+  o('-v --assign','Gán giá trị cho biến trước khi chạy, ví dụ -v ip=1.2.3.4.','biến {v}','BIẾN=GIÁ_TRỊ'),
+  o('-f --file','Đọc chương trình awk từ file thay vì viết trên dòng lệnh.','chương trình từ {v}','FILE')],
+  ex:[["awk '{print $1}' /var/log/apache2/access.log","In cột IP của access log"],["awk '$9 == 404 {print $7}' access.log","In URI của các request lỗi 404"],["awk -F'\"' '{print $6}' access.log","In User-Agent (tách theo dấu ngoặc kép)"],["awk '{c[$1]++} END {for (ip in c) print c[ip], ip}' access.log","Đếm số request theo IP chỉ bằng awk"]]},
+sed:{cat:'loc', sum:'Biên tập luồng văn bản: thay thế, xóa, hoặc trích các dòng theo số dòng hay theo mẫu.', syn:"sed [OPTION]... 'SCRIPT' [FILE]...", pos:['script','file*'], kw:'thay the xoa trich khoang dong replace', opts:[
+  o('-n --quiet --silent','Không tự động in mọi dòng; chỉ in dòng nào có lệnh p.','chỉ in dòng chọn'),
+  o('-E -r --regexp-extended','Dùng regex mở rộng trong script.','regex mở rộng'),
+  o('-e --expression','Thêm một lệnh sed. Dùng nhiều -e để chạy nhiều lệnh.','lệnh "{v}"','SCRIPT',{vrole:'script'}),
+  o('-f --file','Đọc các lệnh sed từ file.','lệnh từ {v}','FILE'),
+  o('-i --in-place','Sửa thẳng vào file gốc. Cẩn thận: không dùng trên log là bằng chứng. -i.bak sẽ giữ bản sao lưu.','sửa thẳng vào file',null,{attach:true}),
+  o('-s --separate','Xử lý từng file riêng thay vì nối thành một luồng.','từng file riêng'),
+  o('-u --unbuffered','Xuất ngay từng dòng, hữu ích sau tail -f.','không đệm')],
+  ex:[["sed -n '100,120p' /var/log/syslog","In dòng 100 đến 120"],["sed -n '/17\\/Jul\\/2025:05:20/,/17\\/Jul\\/2025:05:30/p' access.log","Trích log trong khoảng thời gian"],["sed 's/password=[^&]*/password=***/g' access.log","Che mật khẩu trước khi chia sẻ log"]]},
+cut:{cat:'loc', sum:'Cắt lấy một số cột hoặc ký tự trên mỗi dòng.', syn:'cut -d SEP -f CỘT [FILE]...', pos:['file*'], kw:'cot truong field cat', opts:[
+  o('-d --delimiter','Ký tự phân tách cột (chỉ một ký tự). Mặc định là tab.','tách bằng {v}','SEP',{vx:v => 'tách cột bằng ' + sepName(v)}),
+  o('-f --fields','Danh sách cột cần lấy: 1,7 hoặc 2-5 hoặc 3-.','lấy cột {v}','DANH_SÁCH',{vx:listCols}),
+  o('-c --characters','Lấy theo vị trí ký tự, ví dụ 1-15.','ký tự {v}','DANH_SÁCH'),
+  o('-b --bytes','Lấy theo vị trí byte.','byte {v}','DANH_SÁCH'),
+  o('--complement','Đảo ngược: lấy mọi cột trừ các cột đã chọn.','trừ các cột chọn'),
+  o('-s --only-delimited','Bỏ qua dòng không chứa ký tự phân tách.','bỏ dòng không có SEP'),
+  o('--output-delimiter','Ký tự phân tách khi in kết quả.','xuất bằng {v}','CHUỖI')],
+  ex:[["cut -d' ' -f1,7,9 /var/log/apache2/access.log","Lấy IP, URI, status"],["cut -d: -f1 /etc/passwd","Danh sách tên tài khoản"]]},
+tr:{cat:'loc', sum:'Thay thế hoặc xóa ký tự (không làm việc theo chuỗi).', syn:'tr [OPTION] TẬP1 [TẬP2]', pos:['set1','set2'], kw:'ky tu thay xoa chu hoa thuong', opts:[
+  o('-d --delete','Xóa mọi ký tự thuộc TẬP1.','xóa ký tự'),
+  o('-s --squeeze-repeats','Gộp các ký tự lặp liên tiếp thành một, ví dụ nhiều dấu cách thành một.','gộp ký tự lặp'),
+  o('-c -C --complement','Dùng phần bù của TẬP1 (mọi ký tự không thuộc tập).','phần bù')],
+  ex:[["tr -s ' ' < /var/log/auth.log","Gộp nhiều dấu cách để cắt cột dễ hơn"],["tr 'A-Z' 'a-z' < access.log","Đổi chữ hoa thành chữ thường"]]},
+jq:{cat:'loc', sum:'Lọc và trích dữ liệu từ log định dạng JSON (Suricata eve.json, log ứng dụng, log cloud).', syn:"jq [OPTION] 'BỘ_LỌC' [FILE]...", pos:['filter','file*'], kw:'json suricata eve', opts:[
+  o('-r --raw-output','In chuỗi không kèm dấu ngoặc kép, để đưa tiếp cho sort, uniq.','chuỗi thô'),
+  o('-c --compact-output','In mỗi object trên một dòng.','gọn một dòng'),
+  o('-s --slurp','Đọc toàn bộ đầu vào thành một mảng.','gom thành mảng'),
+  o('-S --sort-keys','Sắp xếp khóa của object khi in.','sắp xếp khóa'),
+  o('-e --exit-status','Đặt mã thoát theo kết quả (null/false thì lỗi).','mã thoát theo kết quả'),
+  o('-n --null-input','Không đọc đầu vào, chạy bộ lọc với null.','không đọc đầu vào'),
+  o('--arg','Truyền biến chuỗi vào bộ lọc: --arg ten giatri, dùng là $ten.','biến {v}','TÊN GIÁ_TRỊ',{a2:true})],
+  ex:[["jq -r 'select(.event_type==\"alert\") | .alert.signature' /var/log/suricata/eve.json","Tên các cảnh báo Suricata"]]},
+sort:{cat:'tk', sum:'Sắp xếp các dòng. Thường đặt trước uniq.', syn:'sort [OPTION]... [FILE]...', pos:['file*'], kw:'sap xep thu tu tang giam', opts:[
+  o('-n --numeric-sort','So sánh theo giá trị số (10 đứng sau 9), không theo chữ.','theo số'),
+  o('-r --reverse','Đảo thứ tự: giảm dần.','giảm dần'),
+  o('-h --human-numeric-sort','So sánh số có đơn vị như 2K, 1G (dùng với du -h).','số có đơn vị'),
+  o('-V --version-sort','Sắp xếp kiểu số phiên bản, cũng dùng tốt cho địa chỉ IP.','kiểu phiên bản/IP'),
+  o('-k --key','Sắp xếp theo cột chỉ định, ví dụ -k2,2 hoặc -k9n.','theo cột {v}','KHÓA',{vx:v => { const m = /^(\d+)(?:\.\d+)?([a-zA-Z]*)(?:,(\d+)(?:\.\d+)?([a-zA-Z]*))?$/.exec(v); if(!m) return 'khóa ' + v; return (m[3] ? (m[1] === m[3] ? 'chỉ cột ' + m[1] : 'từ cột ' + m[1] + ' đến ' + m[3]) : 'từ cột ' + m[1] + ' đến cuối dòng') + ((m[2] + (m[4] || '')).includes('n') ? ', so sánh theo số' : '') + ((m[2] + (m[4] || '')).includes('r') ? ', giảm dần' : ''); }}),
+  o('-t --field-separator','Ký tự phân tách cột cho -k. Mặc định là khoảng trắng.','tách bằng {v}','SEP',{vx:v => 'tách cột bằng ' + sepName(v)}),
+  o('-u --unique','Chỉ giữ một dòng cho mỗi giá trị trùng.','bỏ trùng'),
+  o('-f --ignore-case','Không phân biệt hoa thường khi so sánh.','không phân biệt hoa thường'),
+  o('-M --month-sort','So sánh theo tên tháng (Jan < Feb < …).','theo tháng'),
+  o('-b --ignore-leading-blanks','Bỏ qua khoảng trắng ở đầu khi so sánh.','bỏ khoảng trắng đầu'),
+  o('-s --stable','Giữ nguyên thứ tự gốc của các dòng bằng nhau.','ổn định'),
+  o('-R --random-sort','Xáo trộn ngẫu nhiên.','ngẫu nhiên'),
+  o('-o --output','Ghi kết quả vào file (có thể chính là file đầu vào).','ghi ra {v}','FILE')],
+  ex:[['sort -rn','Sắp xếp số giảm dần, hay dùng sau uniq -c'],["sort -t' ' -k9,9n access.log","Sắp xếp theo status code"],['sort -u -V ips.txt','Danh sách IP không trùng, đúng thứ tự số']]},
+uniq:{cat:'tk', sum:'Gộp các dòng trùng nằm liền nhau. Phải sort trước thì mới gộp đúng.', syn:'uniq [OPTION]... [FILE]', pos:['file*'], kw:'trung lap dem gop', opts:[
+  o('-c --count','Thêm số lần xuất hiện ở đầu mỗi dòng.','đếm số lần'),
+  o('-d --repeated','Chỉ in các dòng bị lặp (xuất hiện từ 2 lần).','chỉ dòng lặp'),
+  o('-u --unique','Chỉ in các dòng xuất hiện đúng một lần.','chỉ dòng duy nhất'),
+  o('-i --ignore-case','Không phân biệt hoa thường khi so sánh.','không phân biệt hoa thường'),
+  o('-f --skip-fields','Bỏ qua N cột đầu khi so sánh.','bỏ {v} cột đầu','N'),
+  o('-s --skip-chars','Bỏ qua N ký tự đầu khi so sánh.','bỏ {v} ký tự đầu','N'),
+  o('-w --check-chars','Chỉ so sánh N ký tự đầu.','so {v} ký tự','N')],
+  ex:[["awk '{print $1}' access.log | sort | uniq -c | sort -rn","Đếm request theo IP, nhiều nhất lên đầu"]]},
+wc:{cat:'tk', sum:'Đếm số dòng, từ, byte.', syn:'wc [OPTION]... [FILE]...', pos:['file*'], kw:'dem so dong count', opts:[
+  o('-l --lines','Đếm số dòng.','đếm dòng'),
+  o('-w --words','Đếm số từ.','đếm từ'),
+  o('-c --bytes','Đếm số byte.','đếm byte'),
+  o('-m --chars','Đếm số ký tự.','đếm ký tự'),
+  o('-L --max-line-length','In độ dài dòng dài nhất.','dòng dài nhất')],
+  ex:[['grep "Failed password" /var/log/auth.log | wc -l','Tổng số lần đăng nhập sai']]},
+head:{cat:'tk', sum:'Lấy N dòng đầu (mặc định 10).', syn:'head [-n N] [FILE]...', pos:['file*'], kw:'dau top dong', numShort:'lấy {v} dòng đầu', numLabel:'{v} dòng đầu', opts:[
+  o('-n --lines','Số dòng cần lấy. -n -5 nghĩa là lấy tất cả trừ 5 dòng cuối.','{v} dòng đầu','N',{vx:v => v.startsWith('-') ? 'lấy tất cả trừ ' + v.slice(1) + ' dòng cuối' : 'lấy ' + v + ' dòng đầu'}),
+  o('-c --bytes','Lấy N byte đầu.','{v} byte đầu','N'),
+  o('-q --quiet','Không in tên file khi đọc nhiều file.','ẩn tên file')],
+  ex:[['head -n 20 /var/log/syslog','20 dòng đầu']]},
+tail:{cat:'xem', sum:'Lấy N dòng cuối (mặc định 10), hoặc theo dõi log theo thời gian thực.', syn:'tail [-n N] [-f|-F] [FILE]...', pos:['file*'], kw:'cuoi theo doi truc tiep realtime follow', numShort:'lấy {v} dòng cuối', numLabel:'{v} dòng cuối', opts:[
+  o('-n --lines','Số dòng cuối cần lấy. -n +5 nghĩa là in từ dòng 5 đến hết.','{v} dòng cuối','N',{vx:v => v.startsWith('+') ? 'in từ dòng ' + v.slice(1) + ' đến hết file' : 'lấy ' + v + ' dòng cuối'}),
+  o('-f --follow','Theo dõi: tiếp tục in các dòng mới được ghi thêm vào file. Nhấn Ctrl+C để dừng.','theo dõi trực tiếp'),
+  o('-F','Theo dõi như -f nhưng mở lại file khi bị logrotate xoay vòng. Nên dùng cho log hệ thống.','theo dõi, chịu được logrotate'),
+  o('-c --bytes','Lấy N byte cuối.','{v} byte cuối','N'),
+  o('-q --quiet','Không in tên file khi theo dõi nhiều file.','ẩn tên file'),
+  o('-s --sleep-interval','Số giây chờ giữa các lần kiểm tra khi theo dõi.','chờ {v}s','GIÂY'),
+  o('--pid','Dừng theo dõi khi tiến trình PID kết thúc.','đến khi PID {v} dừng','PID'),
+  o('--retry','Tiếp tục thử mở file nếu chưa tồn tại.','thử lại')],
+  ex:[['tail -n 50 /var/log/auth.log','50 dòng cuối'],['tail -F /var/log/apache2/access.log','Xem request mới theo thời gian thực']]},
+column:{cat:'tk', sum:'Căn các cột thẳng hàng cho dễ đọc.', syn:'column -t [-s SEP] [FILE]', pos:['file*'], kw:'bang can le dep', opts:[
+  o('-t --table','Định dạng thành bảng thẳng cột.','dạng bảng'),
+  o('-s --separator','Ký tự phân tách cột đầu vào.','tách bằng {v}','SEP',{vx:v => 'tách cột bằng ' + sepName(v)}),
+  o('-o --output-separator','Ký tự phân tách khi in.','xuất bằng {v}','CHUỖI')],
+  ex:[['cut -d: -f1,3,7 /etc/passwd | column -t -s:','Bảng tài khoản, UID, shell']]},
+tee:{cat:'tk', sum:'Vừa ghi dữ liệu vào file vừa chuyển tiếp ra màn hình hoặc lệnh sau.', syn:'tee [-a] FILE...', pos:['outfile*'], kw:'luu ghi file dong thoi', opts:[
+  o('-a --append','Ghi nối vào cuối file thay vì ghi đè.','ghi nối'),
+  o('-i --ignore-interrupts','Bỏ qua tín hiệu ngắt Ctrl+C.','bỏ qua Ctrl+C')],
+  ex:[['grep "Failed" /var/log/auth.log | tee failed.txt | wc -l','Lưu kết quả và đếm cùng lúc']]},
+xargs:{cat:'tk', sum:'Biến từng dòng dữ liệu đầu vào thành tham số cho một lệnh khác.', syn:'xargs [OPTION]... LỆNH [THAM_SỐ]...', pos:[], kw:'tham so hang loat', nest:{op:'xargs', text:'đưa từng mục đầu vào làm tham số cho'}, opts:[
+  o('-0 --null','Các mục được phân tách bằng ký tự NUL (dùng với find -print0), an toàn với tên file có dấu cách.','tách bằng NUL'),
+  o('-I','Thay chuỗi chỉ định (thường là {}) trong lệnh bằng từng mục đầu vào.','thay {v}','CHUỖI'),
+  o('-n --max-args','Mỗi lần chạy lệnh chỉ dùng tối đa N mục.','{v} mục mỗi lần','N'),
+  o('-P --max-procs','Chạy song song tối đa N tiến trình.','{v} song song','N'),
+  o('-r --no-run-if-empty','Không chạy lệnh nếu đầu vào rỗng.','bỏ qua nếu rỗng'),
+  o('-t --verbose','In lệnh ra trước khi chạy.','in lệnh trước khi chạy')],
+  ex:[['find /var/log -name "*.gz" -mtime -7 | xargs zgrep -l "sqlmap"','Tìm log nén 7 ngày gần đây có dấu vết sqlmap']]},
+cat:{cat:'xem', sum:'In toàn bộ nội dung file ra màn hình.', syn:'cat [OPTION]... [FILE]...', pos:['file*'], kw:'xem in noi dung', opts:[
+  o('-n --number','Đánh số mọi dòng.','đánh số dòng'),
+  o('-b --number-nonblank','Đánh số các dòng không trống.','đánh số dòng có chữ'),
+  o('-A --show-all','Hiện ký tự ẩn (tab, cuối dòng, ký tự điều khiển). Hữu ích khi soi log bị chèn ký tự lạ.','hiện ký tự ẩn'),
+  o('-s --squeeze-blank','Gộp nhiều dòng trống liên tiếp thành một.','gộp dòng trống'),
+  o('-E --show-ends','Hiện dấu $ ở cuối mỗi dòng.','hiện cuối dòng'),
+  o('-T --show-tabs','Hiện tab dưới dạng ^I.','hiện tab'),
+  o('-v --show-nonprinting','Hiện ký tự không in được.','hiện ký tự lạ')],
+  ex:[['cat -A suspicious.log | head','Soi ký tự ẩn trong log']]},
+zcat:{cat:'xem', sum:'Giải nén và in nội dung file .gz mà không cần giải nén ra đĩa.', syn:'zcat [FILE.gz]...', pos:['file*'], kw:'nen gz giai nen', opts:[
+  o('-f --force','Vẫn in file kể cả khi không phải định dạng gzip.','chấp nhận file thường')],
+  ex:[['zcat /var/log/auth.log.2.gz | grep "Accepted"','Đăng nhập thành công trong log cũ']]},
+tac:{cat:'xem', sum:'In file theo thứ tự ngược: dòng cuối lên trước (log mới nhất trước).', syn:'tac [FILE]...', pos:['file*'], kw:'nguoc moi nhat', opts:[
+  o('-s --separator','Dùng chuỗi khác thay cho xuống dòng làm dấu phân tách.','tách bằng {v}','CHUỖI')],
+  ex:[['tac /var/log/auth.log | grep -m 5 "sudo"','5 lần dùng sudo gần nhất']]},
+less:{cat:'xem', sum:'Xem file dài từng trang, cuộn và tìm kiếm. Gõ /từ_khóa để tìm, n tới kết quả tiếp, q để thoát.', syn:'less [OPTION]... FILE', pos:['file*'], kw:'xem trang cuon tim', opts:[
+  o('-N --LINE-NUMBERS','Hiện số dòng.','kèm số dòng'),
+  o('-S --chop-long-lines','Không tự xuống dòng; dòng dài được cắt, cuộn ngang để xem.','không xuống dòng'),
+  o('-R --RAW-CONTROL-CHARS','Hiển thị màu (mã ANSI) thay vì ký tự lạ.','giữ màu'),
+  o('-i --ignore-case','Tìm kiếm không phân biệt hoa thường (trừ khi từ khóa có chữ hoa).','tìm không phân biệt hoa thường'),
+  o('-I --IGNORE-CASE','Tìm kiếm luôn không phân biệt hoa thường.','luôn không phân biệt hoa thường'),
+  o('+F','Mở và theo dõi như tail -f. Nhấn Ctrl+C để quay lại chế độ cuộn.','theo dõi trực tiếp'),
+  o('+G','Mở và nhảy ngay tới cuối file.','nhảy tới cuối')],
+  ex:[['less -NS /var/log/apache2/access.log','Xem access log có số dòng, không xuống dòng']]},
+journalctl:{cat:'sys', sum:'Đọc log của systemd-journald: dịch vụ, kernel, đăng nhập. Trên Ubuntu hiện đại nhiều log chỉ có ở đây.', syn:'journalctl [OPTION]... [TRƯỜNG=GIÁ_TRỊ]...', pos:['field*'], kw:'systemd dich vu service unit nhat ky', opts:[
+  o('-u --unit','Chỉ lấy log của một dịch vụ, ví dụ ssh, apache2, cron.','dịch vụ {v}','UNIT'),
+  o('-f --follow','Theo dõi log mới theo thời gian thực.','theo dõi trực tiếp'),
+  o('-n --lines','Chỉ hiện N dòng mới nhất.','{v} dòng mới nhất','N'),
+  o('-p --priority','Lọc theo mức độ: emerg(0) alert(1) crit(2) err(3) warning(4) notice(5) info(6) debug(7).','mức {v}','MỨC',{vx:prioX}),
+  o('-S --since','Từ thời điểm: "2026-11-19 08:00", today, yesterday, "1 hour ago".','từ {v}','THỜI_GIAN',{vx:v => 'bắt đầu từ ' + v}),
+  o('-U --until','Đến thời điểm, cùng định dạng với --since.','đến {v}','THỜI_GIAN',{vx:v => 'kết thúc tại ' + v}),
+  o('-b --boot','Chỉ log của lần khởi động hiện tại; -b -1 là lần trước đó.','lần khởi động {v}','ID',{ao:/^-?\d+$|^[0-9a-f]{32}$/}),
+  o('-k --dmesg','Chỉ log của kernel.','log kernel'),
+  o('-r --reverse','Log mới nhất hiện trước.','mới nhất trước'),
+  o('-o --output','Định dạng đầu ra: short, short-iso, json, json-pretty, cat, verbose.','định dạng {v}','ĐỊNH_DẠNG'),
+  o('-t --identifier','Lọc theo tên chương trình ghi log (SYSLOG_IDENTIFIER), ví dụ sshd, sudo.','nguồn {v}','TÊN'),
+  o('-g --grep','Lọc theo regex trong nội dung thông điệp.','khớp "{v}"','MẪU',{vrole:'pattern'}),
+  o('-e --pager-end','Mở và nhảy tới cuối log.','nhảy tới cuối'),
+  o('-x --catalog','Thêm giải thích cho thông điệp nếu có.','kèm giải thích'),
+  o('-q --quiet','Ẩn các thông báo phụ.','ẩn thông báo phụ'),
+  o('--no-pager','In thẳng ra, không mở trình xem từng trang. Cần khi đưa sang grep hoặc lưu file.','không phân trang'),
+  o('--utc','Hiện thời gian theo UTC.','giờ UTC'),
+  o('--list-boots','Liệt kê các lần khởi động máy.','liệt kê lần khởi động'),
+  o('--disk-usage','Cho biết journal đang chiếm bao nhiêu dung lượng.','dung lượng journal')],
+  ex:[['journalctl -u ssh --since today -p warning --no-pager','Cảnh báo của SSH hôm nay'],['journalctl -f -t sudo','Theo dõi lệnh sudo theo thời gian thực'],['journalctl _COMM=sshd -o json-pretty -n 5','5 bản ghi sshd dạng JSON']]},
+dmesg:{cat:'sys', sum:'In bộ đệm log của kernel: lỗi phần cứng, driver, AppArmor chặn, OOM killer.', syn:'dmesg [OPTION]...', pos:[], kw:'kernel driver phan cung apparmor', opts:[
+  o('-T --ctime','Hiện thời gian dễ đọc thay vì số giây kể từ lúc khởi động.','giờ dễ đọc'),
+  o('-w --follow','Theo dõi thông điệp kernel mới.','theo dõi trực tiếp'),
+  o('-l --level','Lọc theo mức: emerg, alert, crit, err, warn, notice, info, debug.','mức {v}','DANH_SÁCH'),
+  o('-H --human','Định dạng dễ đọc, có màu và phân trang.','dễ đọc'),
+  o('-x --decode','Hiện tên facility và level.','kèm facility/level'),
+  o('-C --clear','Xóa bộ đệm log kernel. Cẩn thận: mất dấu vết.','xóa bộ đệm')],
+  ex:[['sudo dmesg -T | grep -i "apparmor=\\"DENIED\\""','Những lần AppArmor chặn chương trình']]},
+ausearch:{cat:'aud', sum:'Tìm sự kiện trong log auditd (/var/log/audit/audit.log). Cần quyền root.', syn:'ausearch [OPTION]...', pos:[], kw:'audit auditd su kien syscall key', opts:[
+  o('-k --key','Tìm sự kiện có key (nhãn) đặt trong rule auditctl -k.','key {v}','KEY'),
+  o('-m --message','Lọc theo loại bản ghi: SYSCALL, EXECVE, USER_LOGIN, USER_AUTH, CONFIG_CHANGE…','loại {v}','LOẠI',{vx:v => ({EXECVE:'lệnh được chạy kèm tham số', SYSCALL:'lời gọi hệ thống', USER_LOGIN:'đăng nhập', USER_AUTH:'xác thực', USER_CMD:'lệnh chạy qua sudo', CONFIG_CHANGE:'thay đổi cấu hình audit', AVC:'AppArmor/SELinux chặn'}[v] || 'loại bản ghi ' + v)}),
+  o('-i --interpret','Dịch số sang chữ: UID thành tên user, số syscall thành tên. Nên luôn dùng.','dịch sang chữ'),
+  o('-ts --start','Từ thời điểm: today, yesterday, recent (10 phút), this-week, hoặc "11/19/2026 10:00:00".','từ {v}','THỜI_GIAN',{at:'time', vx:timeX}),
+  o('-te --end','Đến thời điểm, cùng định dạng với --start.','đến {v}','THỜI_GIAN',{at:'time', vx:timeX}),
+  o('-ua --uid-all','Sự kiện có uid, euid hoặc auid bằng giá trị này.','uid/auid {v}','UID'),
+  o('-ui --uid','Lọc theo UID của tiến trình (33 là www-data trên Ubuntu).','uid {v}','UID',{vx:v => v === '33' ? 'UID 33 = www-data (web server)' : v === '0' ? 'UID 0 = root' : 'UID ' + v}),
+  o('-ul --loginuid','Lọc theo auid: người đã đăng nhập ban đầu, giữ nguyên dù đổi user bằng sudo/su.','auid {v}','AUID'),
+  o('-x --executable','Lọc theo chương trình đã chạy, ví dụ /usr/bin/whoami.','chương trình {v}','ĐƯỜNG_DẪN'),
+  o('-f --file','Lọc theo file bị truy cập.','file {v}','FILE'),
+  o('-sc --syscall','Lọc theo tên syscall: execve, openat, creat, connect…','syscall {v}','TÊN'),
+  o('-sv --success','Lọc theo kết quả: yes (thành công) hoặc no (thất bại).','thành công={v}','yes|no'),
+  o('-p --pid','Lọc theo PID.','PID {v}','PID'),
+  o('-c --comm','Lọc theo tên tiến trình (comm).','tiến trình {v}','TÊN'),
+  o('-a --event','Lấy đúng sự kiện có số ID này.','sự kiện {v}','ID'),
+  o('-if --input','Đọc từ file log khác thay vì audit.log hiện tại.','đọc từ {v}','FILE'),
+  o('-r --raw','In bản ghi thô, dùng để đưa sang aureport.','bản ghi thô'),
+  o('--format','Định dạng đầu ra: raw, default, interpret, csv, text.','định dạng {v}','ĐỊNH_DẠNG')],
+  ex:[['sudo ausearch -k webshell_exec -i -ts today','Lệnh do web server chạy hôm nay'],['sudo ausearch -m EXECVE -ui 33 -i','Mọi lệnh www-data đã chạy'],['sudo ausearch -f /etc/passwd -sv yes -i','Ai đã truy cập /etc/passwd']]},
+aureport:{cat:'aud', sum:'Tạo báo cáo tổng hợp từ log auditd. Cần quyền root.', syn:'aureport [OPTION]...', pos:[], kw:'audit bao cao thong ke', opts:[
+  o('-x --executable','Báo cáo các chương trình đã được chạy.','chương trình đã chạy'),
+  o('-f --file','Báo cáo các file bị truy cập.','file bị truy cập'),
+  o('-l --login','Báo cáo đăng nhập.','đăng nhập'),
+  o('-au --auth','Báo cáo các lần xác thực.','xác thực'),
+  o('-u --user','Báo cáo theo user.','theo user'),
+  o('-k --key','Báo cáo theo key của rule.','theo key'),
+  o('-s --syscall','Báo cáo theo syscall.','theo syscall'),
+  o('-e --event','Báo cáo theo sự kiện.','theo sự kiện'),
+  o('-m --mods','Báo cáo thay đổi tài khoản (thêm user, đổi mật khẩu).','thay đổi tài khoản'),
+  o('-c --config','Báo cáo thay đổi cấu hình audit.','đổi cấu hình'),
+  o('-n --anomaly','Báo cáo các bất thường.','bất thường'),
+  o('-a --avc','Báo cáo AppArmor/SELinux chặn.','bị chặn'),
+  o('--summary','Hiện bảng tổng hợp có đếm số lần, thay vì từng dòng.','dạng tổng hợp'),
+  o('--failed','Chỉ sự kiện thất bại.','chỉ thất bại'),
+  o('--success','Chỉ sự kiện thành công.','chỉ thành công'),
+  o('-i --interpret','Dịch số sang chữ.','dịch sang chữ'),
+  o('-ts --start','Từ thời điểm (today, yesterday, this-week…).','từ {v}','THỜI_GIAN',{at:'time', vx:timeX}),
+  o('-te --end','Đến thời điểm.','đến {v}','THỜI_GIAN',{at:'time', vx:timeX}),
+  o('-if --input','Đọc từ file log khác.','đọc từ {v}','FILE')],
+  ex:[['sudo aureport -x --summary -i','Chương trình nào được chạy nhiều nhất'],['sudo aureport -au --failed -ts today','Xác thực thất bại hôm nay']]},
+auditctl:{cat:'aud', sum:'Quản lý rule của auditd: thêm, xóa, liệt kê. Rule tạo bằng lệnh này mất khi khởi động lại.', syn:'auditctl [OPTION]...', pos:[], kw:'audit rule theo doi watch', opts:[
+  o('-l','Liệt kê các rule đang chạy.','liệt kê rule'),
+  o('-s','Hiện trạng thái của audit.','trạng thái'),
+  o('-w','Theo dõi một file hoặc thư mục.','theo dõi {v}','ĐƯỜNG_DẪN'),
+  o('-W','Gỡ rule theo dõi file đã tạo bằng -w.','gỡ theo dõi {v}','ĐƯỜNG_DẪN'),
+  o('-p','Quyền cần ghi lại: r đọc, w ghi, x thực thi, a đổi thuộc tính.','quyền {v}','rwxa',{vx:v => v.split('').map(c => ({r:'đọc', w:'ghi', x:'thực thi', a:'đổi thuộc tính'}[c] || c)).join(', ')}),
+  o('-k','Gắn key (nhãn) để sau này tìm bằng ausearch -k.','key {v}','KEY'),
+  o('-a','Thêm rule syscall: always,exit là luôn ghi khi syscall kết thúc.','{v}','HÀNH_ĐỘNG,DANH_SÁCH'),
+  o('-S','Syscall cần theo dõi, ví dụ execve.','syscall {v}','SYSCALL'),
+  o('-F','Điều kiện lọc: arch=b64, euid=33, auid>=1000, path=…','điều kiện {v}','TRƯỜNG=GIÁ_TRỊ'),
+  o('-D','Xóa mọi rule.','xóa mọi rule'),
+  o('-e','Bật/tắt audit: 0 tắt, 1 bật, 2 khóa cấu hình đến khi khởi động lại.','chế độ {v}','0|1|2')],
+  ex:[['sudo auditctl -w /etc/passwd -p wa -k passwd_change','Ghi lại mọi thay đổi /etc/passwd'],['sudo auditctl -a always,exit -F arch=b64 -S execve -F euid=33 -k webshell_exec','Ghi lại lệnh do www-data chạy']]},
+last:{cat:'login', sum:'Lịch sử đăng nhập thành công và khởi động lại (đọc /var/log/wtmp).', syn:'last [OPTION]... [USER]...', pos:['user*'], kw:'dang nhap lich su login wtmp', numShort:'{v} bản ghi gần nhất', numLabel:'{v} bản ghi', opts:[
+  o('-n --limit','Chỉ hiện N bản ghi gần nhất.','{v} bản ghi','N'),
+  o('-F --fulltimes','Hiện ngày giờ đầy đủ lúc đăng nhập và đăng xuất.','giờ đầy đủ'),
+  o('-i --ip','Hiện địa chỉ IP thay vì tên máy.','hiện IP'),
+  o('-a --hostlast','Đưa tên máy/IP ra cột cuối.','IP ở cột cuối'),
+  o('-w --fullnames','Hiện đầy đủ tên user và tên máy.','tên đầy đủ'),
+  o('-x --system','Hiện cả sự kiện tắt máy và đổi runlevel.','kèm tắt máy'),
+  o('-s --since','Từ thời điểm, ví dụ -s -2days hoặc -s 2026-11-01.','từ {v}','THỜI_GIAN'),
+  o('-t --until','Đến thời điểm.','đến {v}','THỜI_GIAN'),
+  o('-f --file','Đọc file wtmp khác, ví dụ /var/log/wtmp.1.','đọc {v}','FILE')],
+  ex:[['last -F -i -n 20','20 lần đăng nhập gần nhất kèm IP và giờ đầy đủ']]},
+lastb:{cat:'login', sum:'Lịch sử đăng nhập THẤT BẠI (đọc /var/log/btmp, cần sudo). Dấu hiệu brute force SSH.', syn:'sudo lastb [OPTION]... [USER]...', pos:['user*'], kw:'that bai brute force btmp', numShort:'{v} bản ghi gần nhất', numLabel:'{v} bản ghi', opts:[],
+  ex:[['sudo lastb -i -n 30','30 lần đăng nhập thất bại gần nhất']]},
+lastlog:{cat:'login', sum:'Lần đăng nhập gần nhất của từng tài khoản. Tài khoản hệ thống mà có đăng nhập là dấu hiệu đáng ngờ.', syn:'lastlog [OPTION]...', pos:[], kw:'lan cuoi tai khoan', opts:[
+  o('-u --user','Chỉ xem một user.','user {v}','USER'),
+  o('-b --before','Chỉ tài khoản không đăng nhập trong N ngày qua.','vắng {v} ngày','NGÀY'),
+  o('-t --time','Chỉ tài khoản có đăng nhập trong N ngày qua.','trong {v} ngày','NGÀY')],
+  ex:[['lastlog -t 7','Ai đã đăng nhập trong 7 ngày qua']]},
+who:{cat:'login', sum:'Ai đang đăng nhập vào máy lúc này.', syn:'who [OPTION]...', pos:[], kw:'dang online hien tai', opts:[
+  o('-a --all','Hiện mọi thông tin.','tất cả'),
+  o('-b --boot','Thời điểm khởi động gần nhất.','giờ khởi động'),
+  o('-u --users','Kèm thời gian rảnh và PID của phiên.','kèm PID'),
+  o('-H --heading','In dòng tiêu đề cột.','có tiêu đề')],
+  ex:[['who -u -H','Phiên đăng nhập hiện tại']]},
+find:{cat:'file', sum:'Tìm file theo tên, loại, thời gian sửa, kích thước, quyền… và có thể chạy lệnh trên từng file.', syn:'find [THƯ_MỤC]... [ĐIỀU_KIỆN]... [HÀNH_ĐỘNG]', pos:[], kw:'tim file webshell moi sua', custom:'find', opts:[
+  o('-name','Tên file khớp mẫu glob (phân biệt hoa thường), ví dụ "*.php".','tên {v}','MẪU'),
+  o('-iname','Như -name nhưng không phân biệt hoa thường.','tên {v}','MẪU'),
+  o('-path','Đường dẫn đầy đủ khớp mẫu glob.','đường dẫn {v}','MẪU'),
+  o('-regex','Đường dẫn đầy đủ khớp regex.','regex {v}','REGEX'),
+  o('-type','Loại: f file thường, d thư mục, l symlink.','loại {v}','LOẠI',{vx:v => ({f:'file thường', d:'thư mục', l:'symlink', s:'socket', p:'pipe'}[v] || v)}),
+  o('-mtime','Thời gian sửa nội dung, tính theo ngày: -7 là trong 7 ngày, +30 là cũ hơn 30 ngày.','sửa {v} ngày','N',{vx:v => daysX(v,'ngày')}),
+  o('-mmin','Thời gian sửa nội dung, tính theo phút.','sửa {v} phút','N',{vx:v => daysX(v,'phút')}),
+  o('-ctime','Thời gian đổi trạng thái (quyền, chủ sở hữu) theo ngày. Khó giả mạo hơn mtime.','ctime {v} ngày','N',{vx:v => daysX(v,'ngày').replace('sửa đổi','đổi trạng thái')}),
+  o('-cmin','Thời gian đổi trạng thái theo phút.','ctime {v} phút','N',{vx:v => daysX(v,'phút').replace('sửa đổi','đổi trạng thái')}),
+  o('-atime','Thời gian truy cập theo ngày.','truy cập {v} ngày','N',{vx:v => daysX(v,'ngày').replace('sửa đổi','truy cập')}),
+  o('-newer','Sửa đổi sau file tham chiếu.','mới hơn {v}','FILE'),
+  o('-size','Kích thước: +10M lớn hơn 10 MB, -1k nhỏ hơn 1 KB.','cỡ {v}','CỠ',{vx:v => (v[0] === '+' ? 'lớn hơn ' : v[0] === '-' ? 'nhỏ hơn ' : 'đúng ') + v.replace(/^[+-]/,'').replace(/k$/,' KB').replace(/M$/,' MB').replace(/G$/,' GB').replace(/c$/,' byte')}),
+  o('-user','Thuộc sở hữu của user.','chủ {v}','USER'),
+  o('-group','Thuộc nhóm.','nhóm {v}','NHÓM'),
+  o('-perm','Quyền file: /4000 có SUID, -o+w ai cũng ghi được.','quyền {v}','QUYỀN',{vx:v => v === '/4000' || v === '-4000' || v === '-u=s' ? 'có bit SUID (chạy với quyền chủ file, thường là root)' : v === '/2000' ? 'có bit SGID' : /o\+w|\/0002|-002/.test(v) ? 'ai cũng ghi được' : 'quyền ' + v}),
+  o('-maxdepth','Chỉ đi sâu tối đa N cấp thư mục.','sâu tối đa {v}','N'),
+  o('-mindepth','Bỏ qua N cấp đầu.','bỏ {v} cấp đầu','N'),
+  o('-empty','File hoặc thư mục rỗng.','rỗng'),
+  o('-exec','Chạy lệnh trên mỗi file tìm được; {} được thay bằng tên file.','chạy lệnh'),
+  o('-execdir','Như -exec nhưng chạy trong thư mục chứa file.','chạy lệnh tại thư mục'),
+  o('-ok','Như -exec nhưng hỏi xác nhận trước mỗi lần chạy.','chạy lệnh có hỏi'),
+  o('-ls','In thông tin chi tiết từng file như ls -dils.','in chi tiết'),
+  o('-print','In đường dẫn file (mặc định).','in đường dẫn'),
+  o('-print0','In đường dẫn kết thúc bằng NUL, dùng với xargs -0.','in kèm NUL'),
+  o('-delete','Xóa file tìm được. Cẩn thận: không hoàn tác được, và mất bằng chứng.','XÓA file'),
+  o('-o -or','Hoặc: chỉ cần một trong hai điều kiện.','hoặc'),
+  o('-a -and','Và: cả hai điều kiện (mặc định khi viết liền).','và'),
+  o('-not','Phủ định điều kiện ngay sau.','không')],
+  ex:[['find /var/www/html -name "*.php" -mtime -2','File PHP mới sửa trong 2 ngày (dấu hiệu web shell)'],['find / -perm /4000 -type f 2>/dev/null','Tìm file SUID để kiểm tra leo thang đặc quyền'],['find /var/log -name "*.log" -size +100M','Log nặng hơn 100 MB']]},
+ls:{cat:'file', sum:'Liệt kê file và thư mục.', syn:'ls [OPTION]... [ĐƯỜNG_DẪN]...', pos:['path*'], kw:'liet ke danh sach', opts:[
+  o('-l','Dạng danh sách chi tiết: quyền, chủ, kích thước, thời gian.','chi tiết'),
+  o('-a --all','Hiện cả file ẩn (bắt đầu bằng dấu chấm).','cả file ẩn'),
+  o('-h --human-readable','Kích thước dễ đọc: K, M, G.','cỡ dễ đọc'),
+  o('-t','Sắp xếp theo thời gian sửa, mới nhất trước.','mới nhất trước'),
+  o('-r --reverse','Đảo thứ tự sắp xếp.','đảo thứ tự'),
+  o('-S','Sắp xếp theo kích thước, lớn nhất trước.','lớn nhất trước'),
+  o('-R --recursive','Liệt kê đệ quy cả thư mục con.','đệ quy'),
+  o('-d --directory','Liệt kê chính thư mục, không liệt kê bên trong.','chỉ thư mục'),
+  o('-i --inode','Hiện số inode.','kèm inode'),
+  o('--full-time','Hiện thời gian đầy đủ đến từng giây.','giờ đầy đủ'),
+  o('--time-style','Kiểu hiển thị thời gian, ví dụ full-iso.','kiểu giờ {v}','KIỂU')],
+  ex:[['ls -lat /var/www/html/wp-content/uploads','File mới nhất trong thư mục upload']]},
+stat:{cat:'file', sum:'Xem chi tiết một file: quyền, chủ, và 3 mốc thời gian atime/mtime/ctime để dựng dòng thời gian sự cố.', syn:'stat [OPTION]... FILE...', pos:['file*'], kw:'thoi gian inode chi tiet', opts:[
+  o('-c --format','Chỉ in theo định dạng tự chọn, ví dụ "%n %y" (tên, thời gian sửa).','định dạng {v}','ĐỊNH_DẠNG'),
+  o('-L --dereference','Đi theo symlink để xem file thật.','theo symlink')],
+  ex:[['stat /var/www/html/wp-content/uploads/shell.php','Thời điểm web shell xuất hiện']]},
+sudo:{cat:'khac', sum:'Chạy lệnh với quyền của user khác, mặc định là root. Nhiều file log cần sudo mới đọc được.', syn:'sudo [OPTION]... LỆNH', pos:[], kw:'root quyen admin', nest:{op:'sudo', text:'với quyền root chạy'}, opts:[
+  o('-u --user','Chạy với quyền của user chỉ định thay vì root.','với quyền {v}','USER'),
+  o('-i --login','Mở shell đăng nhập của root.','shell root'),
+  o('-s --shell','Mở shell với quyền root.','shell'),
+  o('-l --list','Xem bạn được phép chạy những lệnh nào bằng sudo.','liệt kê quyền'),
+  o('-E --preserve-env','Giữ nguyên biến môi trường hiện tại.','giữ biến môi trường'),
+  o('-k --reset-timestamp','Bắt nhập lại mật khẩu ở lần sudo sau.','quên mật khẩu đã nhập')],
+  ex:[['sudo tail -f /var/log/auth.log','Theo dõi log xác thực (cần root)']]}
+};
+
+DB.lastb.opts = DB.last.opts;
+['-mtime','-mmin','-ctime','-cmin','-atime','-size','-type','-perm'].forEach(f => { optMap(DB.find)[f].lx = true; });
+optMap(DB.sort)['-k'].lx = true;
+
+const RECIPES = [
+  {t:'Top 10 IP gửi nhiều request nhất', d:'Phát hiện IP quét hoặc brute force trong access log.', c:String.raw`awk '{print $1}' /var/log/apache2/access.log | sort | uniq -c | sort -rn | head -n 10`},
+  {t:'Thống kê status code', d:'Nhiều 404 là dấu hiệu dò thư mục, nhiều 500 là dấu hiệu khai thác lỗi.', c:String.raw`awk '{print $9}' /var/log/apache2/access.log | sort | uniq -c | sort -rn`},
+  {t:'Request lỗi 404 và 500', d:'Lấy IP, URI và status của các request lỗi.', c:String.raw`grep -E '" (404|500) ' /var/log/apache2/access.log | cut -d' ' -f1,7,9`},
+  {t:'User-Agent của tool tấn công', d:'Tách theo dấu ngoặc kép để lấy cột User-Agent.', c:String.raw`awk -F'"' '{print $6}' /var/log/apache2/access.log | sort | uniq -c | sort -rn | head`},
+  {t:'Gọi web shell', d:'File PHP nhận tham số cmd hoặc exec.', c:String.raw`grep -Ei '\.php\?(cmd|exec)=' /var/log/apache2/access.log | awk '{print $1, $4, $7}'`},
+  {t:'Brute force SSH: IP sai mật khẩu nhiều nhất', d:'Cột thứ 4 từ cuối trong dòng "Failed password" là IP.', c:String.raw`grep "Failed password" /var/log/auth.log | awk '{print $(NF-3)}' | sort | uniq -c | sort -rn | head`},
+  {t:'Đăng nhập SSH thành công', d:'Kiểm tra xem có IP lạ đăng nhập được hay không.', c:String.raw`grep "Accepted" /var/log/auth.log | awk '{print $1, $2, $3, $9, $11}'`},
+  {t:'Ai đã dùng sudo', d:'Mỗi lệnh sudo được ghi lại kèm user và lệnh đã chạy.', c:String.raw`grep -E 'sudo:.*COMMAND=' /var/log/auth.log | tail -n 20`},
+  {t:'Theo dõi lỗi web theo thời gian thực', d:'--line-buffered để grep in kết quả ngay khi có dòng mới.', c:String.raw`tail -F /var/log/apache2/error.log | grep -i --line-buffered "error"`},
+  {t:'Tìm trong log cũ đã nén', d:'Đếm số lần đăng nhập WordPress trong các log đã logrotate.', c:String.raw`zgrep -h "POST /wordpress/wp-login.php" /var/log/apache2/access.log.*.gz | wc -l`},
+  {t:'Trích log theo khoảng thời gian', d:'In từ dòng đầu tiên lúc 05:20 đến dòng đầu tiên lúc 05:30.', c:String.raw`sed -n '/17\/Jul\/2025:05:20/,/17\/Jul\/2025:05:30/p' /var/log/apache2/access.log`},
+  {t:'Cảnh báo SSH hôm nay qua journald', d:'Mức warning trở lên, in thẳng không phân trang.', c:String.raw`journalctl -u ssh --since today -p warning --no-pager`},
+  {t:'Lệnh do web server chạy (auditd)', d:'Cần rule auditctl gắn key webshell_exec trước.', c:String.raw`sudo ausearch -k webshell_exec -i -ts today`},
+  {t:'Chương trình được chạy nhiều nhất (auditd)', d:'Báo cáo tổng hợp từ audit.log.', c:String.raw`sudo aureport -x --summary -i`},
+  {t:'File PHP mới trong thư mục upload', d:'Web shell thường được upload vào đây.', c:String.raw`find /var/www/html/wp-content/uploads -name "*.php" -mtime -7 -ls`},
+  {t:'Đăng nhập thất bại gần đây', d:'Đọc /var/log/btmp, cần sudo.', c:String.raw`sudo lastb -i -n 20`},
+  {t:'Cảnh báo Suricata trong eve.json', d:'Đếm từng loại cảnh báo.', c:String.raw`jq -r 'select(.event_type=="alert") | .alert.signature' /var/log/suricata/eve.json | sort | uniq -c | sort -rn`},
+  {t:'Lưu kết quả và đếm cùng lúc', d:'tee ghi ra file, đồng thời chuyển tiếp cho wc.', c:String.raw`grep "Failed password" /var/log/auth.log 2>/dev/null | tee failed.txt | wc -l`}
+];
+
+/* ===================== Bộ phân tích ===================== */
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function norm(s){ return String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d'); }
+
+function tokenize(s){
+  const toks = []; let cur = '', raw = '', has = false, i = 0;
+  const push = () => { if(has) toks.push({k:'w', v:cur, raw}); cur = ''; raw = ''; has = false; };
+  while(i < s.length){
+    const c = s[i];
+    if(c === ' ' || c === '\t' || c === '\n' || c === '\r'){ push(); i++; continue; }
+    if(c === '#' && !has){ break; }
+    if(c === "'"){ const j = s.indexOf("'", i+1); const end = j < 0 ? s.length : j; cur += s.slice(i+1, end); raw += s.slice(i, end+1); has = true; i = end+1; continue; }
+    if(c === '"'){
+      let j = i+1, v = '';
+      while(j < s.length && s[j] !== '"'){ if(s[j] === '\\' && j+1 < s.length && '"\\$`'.includes(s[j+1])){ v += s[j+1]; j += 2; continue; } v += s[j]; j++; }
+      cur += v; raw += s.slice(i, Math.min(j+1, s.length)); has = true; i = j+1; continue;
+    }
+    if(c === '\\' && i+1 < s.length){ if(s[i+1] === '\n'){ i += 2; continue; } cur += s[i+1]; raw += s.slice(i, i+2); has = true; i += 2; continue; }
+    const m = /^(\|\||&&|\||;|&>>|&>|>>|>&|>|<<<|<|&)/.exec(s.slice(i));
+    if(m){
+      let op = m[1];
+      if((op[0] === '>' || op[0] === '<') && has && /^\d$/.test(cur) && raw === cur){ op = cur + op; cur = ''; raw = ''; has = false; }
+      else push();
+      i += m[1].length;
+      if(op.endsWith('>&')){ const d = /^(\d|-)/.exec(s.slice(i)); if(d){ op += d[0]; i += 1; } }
+      toks.push({k:'op', v:op, raw:op}); continue;
+    }
+    cur += c; raw += c; has = true; i++;
+  }
+  push();
+  return toks;
+}
+
+function optMap(def){
+  if(!def._map){ def._map = {}; def.opts.forEach(op => op.f.forEach(f => { def._map[f] = op; })); }
+  return def._map;
+}
+const row = (w, kind, html, tok) => ({ti: w ? (w.grp != null ? w.grp : w.ti) : null, kind, tok: tok != null ? tok : (w ? w.raw : ''), html});
+const trunc = (s, n) => s.length > n ? s.slice(0, n-1) + '…' : s;
+
+function splitAlt(p){
+  const out = []; let cur = '', depth = 0, br = false;
+  for(let i = 0; i < p.length; i++){
+    const c = p[i];
+    if(c === '\\' && i+1 < p.length){ cur += c + p[i+1]; i++; continue; }
+    if(br){ if(c === ']') br = false; cur += c; continue; }
+    if(c === '['){ br = true; cur += c; continue; }
+    if(c === '(') depth++;
+    if(c === ')') depth--;
+    if(c === '|' && depth === 0){ out.push(cur); cur = ''; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+function regexExplain(p, mode){
+  if(mode === 'F') return 'Chuỗi cố định (do -F): tìm đúng nguyên văn, ký tự đặc biệt không có tác dụng.';
+  const ext = mode === 'E' || mode === 'P';
+  const L = [];
+  const alt = ext ? splitAlt(p) : p.split('\\|');
+  if(alt.length > 1) L.push('Khớp <b>một trong</b>: ' + alt.map(a => '<code>' + esc(a) + '</code>').join(' hoặc '));
+  else if(ext && /^[^|]*\(([^()]*\|[^()]*)\)/.test(p)){ const g = /\(([^()]*\|[^()]*)\)/.exec(p); L.push('Nhóm <code>(' + esc(g[1]) + ')</code>: một trong ' + g[1].split('|').map(a => '<code>' + esc(a) + '</code>').join(', ')); }
+  if(p.startsWith('^')) L.push('<code>^</code> neo ở đầu dòng.');
+  if(/(^|[^\\])\$$/.test(p)) L.push('<code>$</code> neo ở cuối dòng.');
+  if(p.includes('.*')) L.push('<code>.*</code> chuỗi bất kỳ, kể cả rỗng.');
+  if(/(^|[^\\])\.(?!\*)/.test(p)) L.push('<code>.</code> một ký tự bất kỳ. Muốn dấu chấm thật thì viết <code>\\.</code>');
+  if(p.includes('\\.')) L.push('<code>\\.</code> dấu chấm thật.');
+  if(p.includes('\\?') && ext) L.push('<code>\\?</code> dấu hỏi thật (trong URL là chỗ bắt đầu tham số).');
+  if(/\[\^/.test(p)) L.push('<code>[^…]</code> một ký tự KHÔNG thuộc tập.');
+  if(/\[(?!\^)/.test(p)) L.push('<code>[…]</code> một ký tự thuộc tập, ví dụ <code>[0-9]</code> là một chữ số.');
+  if(ext && /(^|[^\\])\+/.test(p)) L.push('<code>+</code> lặp lại 1 lần trở lên.');
+  if(ext && /(^|[^\\(])\?/.test(p.replace(/\\\?/g,''))) L.push('<code>?</code> có hoặc không (0 hoặc 1 lần).');
+  if(/\\?\{\d+(,\d*)?\\?\}/.test(p)) L.push('<code>{n,m}</code> lặp từ n đến m lần.');
+  if(p.includes('\\b')) L.push('<code>\\b</code> ranh giới từ.');
+  if(/\\[dsw]/.test(p)){
+    if(mode === 'P') L.push('<code>\\d</code> chữ số, <code>\\s</code> khoảng trắng, <code>\\w</code> chữ/số/gạch dưới.');
+    else L.push('<span class="warn">⚠ <code>\\d</code>, <code>\\s</code>, <code>\\w</code> chỉ chắc chắn đúng với <code>grep -P</code>. Với -E nên dùng <code>[0-9]</code>, <code>[[:space:]]</code>.</span>');
+  }
+  if(!ext && /(^|[^\\])[|+?()]/.test(p)) L.push('<span class="warn">⚠ Không có <code>-E</code>: các ký tự <code>| + ? ( )</code> bị hiểu là ký tự thường. Thêm <code>-E</code> nếu bạn muốn dùng chúng như regex.</span>');
+  if(!L.length) return 'Chuỗi thường: dòng chỉ cần chứa <code>' + esc(p) + '</code> ở bất kỳ đâu.';
+  return '<ul>' + L.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+}
+
+const APACHE = {1:'IP client', 4:'thời gian', 6:'method', 7:'URI', 9:'status code', 10:'kích thước'};
+const APACHE_Q = {2:'dòng request "METHOD URI HTTP"', 4:'referer', 6:'User-Agent'};
+function fieldName(tok, fs){
+  if(tok === '$0') return 'cả dòng';
+  if(tok === '$NF') return 'cột cuối';
+  let m = /^\$\(NF-(\d+)\)$/.exec(tok); if(m) return 'cột thứ ' + (+m[1] + 1) + ' tính từ cuối';
+  m = /^\$(\d+)$/.exec(tok); if(m){ const map = fs === '"' ? APACHE_Q : (fs == null || fs === ' ') ? APACHE : {}; return 'cột ' + m[1] + (map[m[1]] ? ' (access log: ' + map[m[1]] + ')' : ''); }
+  if(tok === 'NR') return 'số thứ tự dòng';
+  if(tok === 'NF') return 'số cột';
+  return null;
+}
+function fieldsDesc(expr, fs){
+  const toks = expr.match(/\$\(NF-\d+\)|\$NF|\$\d+|\bNR\b|\bNF\b/g) || [];
+  const names = [...new Set(toks)].map(t => '<code>' + esc(t) + '</code> = ' + fieldName(t, fs));
+  return names.length ? names.join(', ') : '<code>' + esc(expr) + '</code>';
+}
+function condDesc(c, fs){
+  return c.split(/\s*&&\s*/).map(part => {
+    let m;
+    if((m = /^\/(.*)\/$/.exec(part))) return 'dòng khớp regex <code>' + esc(m[1]) + '</code>';
+    if((m = /^(\$\(NF-\d+\)|\$NF|\$\d+|NR|NF)\s*(!~|~)\s*\/(.*)\/$/.exec(part))) return fieldsDesc(m[1], fs) + (m[2] === '~' ? ' khớp' : ' không khớp') + ' regex <code>' + esc(m[3]) + '</code>';
+    if((m = /^(\$\(NF-\d+\)|\$NF|\$\d+|NR|NF)\s*(==|!=|>=|<=|>|<)\s*(.+)$/.exec(part))) return fieldsDesc(m[1], fs) + ' ' + ({'==':'bằng','!=':'khác','>=':'lớn hơn hoặc bằng','<=':'nhỏ hơn hoặc bằng','>':'lớn hơn','<':'nhỏ hơn'}[m[2]]) + ' <code>' + esc(m[3]) + '</code>';
+    return 'điều kiện <code>' + esc(part) + '</code>';
+  }).join(' <b>và</b> ');
+}
+function awkExplain(prog, fs){
+  const L = [];
+  L.push('Tách mỗi dòng thành các cột theo ' + (fs == null ? 'khoảng trắng (mặc định)' : sepName(fs)) + '.');
+  if(/\bBEGIN\s*\{/.test(prog)) L.push('<code>BEGIN{…}</code> chạy một lần trước khi đọc dòng đầu tiên.');
+  const body = prog.replace(/\bBEGIN\s*\{[^}]*\}/, '').trim();
+  const m = /^([^{]*?)\s*\{/.exec(body);
+  const cond = m ? m[1].trim() : (body.includes('{') ? '' : body);
+  if(cond && cond !== 'END') L.push('Chỉ xử lý ' + condDesc(cond, fs) + (body.includes('{') ? '.' : '. Không có khối { } nên in cả dòng khi điều kiện đúng.'));
+  for(const p of prog.matchAll(/\bprint\b\s*([^;}|>]*)/g)) L.push(p[1].trim() ? 'In ' + fieldsDesc(p[1], fs) + '.' : 'In cả dòng ($0).');
+  for(const p of prog.matchAll(/\bprintf\b\s*([^;}]*)/g)) L.push('In có định dạng: <code>' + esc(p[1].trim()) + '</code>');
+  for(const c of prog.matchAll(/(\w+)\[([^\]]+)\]\s*\+\+/g)) L.push('<code>' + esc(c[0]) + '</code> đếm số lần xuất hiện theo ' + fieldsDesc(c[2], fs) + '.');
+  for(const c of prog.matchAll(/(\w+(?:\[[^\]]+\])?)\s*\+=\s*([^;}]+)/g)) L.push('<code>' + esc(c[1]) + ' += …</code> cộng dồn ' + fieldsDesc(c[2], fs) + '.');
+  if(/for\s*\(\s*\w+\s+in\s+\w+\s*\)/.test(prog)) L.push('<code>for (k in mảng)</code> duyệt từng phần tử của mảng.');
+  if(/\bEND\s*\{/.test(prog)) L.push('<code>END{…}</code> chạy một lần sau khi đọc hết dữ liệu, thường để in kết quả tổng hợp.');
+  return '<ul>' + L.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+}
+function awkLabel(prog){
+  const p = /\bprint\b\s*([^;}|>]*)/.exec(prog);
+  if(/\w+\[[^\]]+\]\s*\+\+/.test(prog)) return 'đếm theo nhóm';
+  return p ? 'in ' + (p[1].trim() || '$0') : 'xử lý cột';
+}
+function sedExplain(s, quiet){
+  const L = []; const un = x => esc(x.replace(/\\\//g, '/'));
+  for(const part of s.split(/\s*;\s*/).filter(Boolean)){
+    let m;
+    if((m = /^s(.)(.*?)\1(.*?)\1([gipI0-9]*)$/.exec(part))) L.push('Thay <code>' + esc(m[2]) + '</code> bằng <code>' + (m[3] ? esc(m[3]) : '(rỗng)') + '</code>' + (m[4].includes('g') ? ' ở mọi vị trí trong dòng' : ' (chỉ lần đầu tiên trên mỗi dòng)') + (/[iI]/.test(m[4]) ? ', không phân biệt hoa thường' : '') + (m[4].includes('p') ? ', rồi in dòng đã thay' : '') + '.');
+    else if((m = /^\/(.*)\/\s*,\s*\/(.*)\/\s*([pd])$/.exec(part))) L.push((m[3] === 'p' ? 'In' : 'Xóa') + ' các dòng từ dòng đầu tiên khớp <code>' + un(m[1]) + '</code> đến dòng khớp <code>' + un(m[2]) + '</code>.');
+    else if((m = /^\/(.*)\/\s*(!?)\s*([pd])$/.exec(part))) L.push((m[3] === 'p' ? 'In' : 'Xóa') + ' các dòng ' + (m[2] ? 'KHÔNG ' : '') + 'khớp <code>' + un(m[1]) + '</code>.');
+    else if((m = /^(\d+|\$)(?:\s*,\s*(\d+|\$))?\s*([pd])$/.exec(part))) L.push((m[3] === 'p' ? 'In' : 'Xóa') + (m[2] ? ' từ dòng ' + (m[1] === '$' ? 'cuối' : m[1]) + ' đến dòng ' + (m[2] === '$' ? 'cuối' : m[2]) : ' dòng ' + (m[1] === '$' ? 'cuối' : m[1])) + '.');
+    else L.push('Lệnh sed <code>' + esc(part) + '</code>.');
+  }
+  if(/p$/.test(s.trim())) L.push(quiet ? 'Có <code>-n</code> nên chỉ những dòng được <code>p</code> chọn mới được in.' : '<span class="warn">⚠ Không có <code>-n</code>: sed vẫn in mọi dòng, nên dòng được chọn bị in 2 lần. Thường cần thêm -n.</span>');
+  return '<ul>' + L.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+}
+function jqExplain(f, raw){
+  const L = [];
+  for(const part of splitAlt(f).map(x => x.trim()).filter(Boolean)){
+    let m;
+    if((m = /^select\((.*)\)$/.exec(part))) L.push('<code>select(…)</code> chỉ giữ các object thỏa <code>' + esc(m[1]) + '</code>.');
+    else if(part === '.') L.push('<code>.</code> giữ nguyên object.');
+    else if(/^\.\[\]$/.test(part)) L.push('<code>.[]</code> tách mảng thành từng phần tử.');
+    else if(/^\.[\w.\[\]"]+$/.test(part)) L.push('<code>' + esc(part) + '</code> lấy giá trị của trường ' + esc(part.slice(1)) + '.');
+    else if(/^\{.*\}$/.test(part)) L.push('<code>{…}</code> tạo object mới chỉ chứa các trường đã chọn.');
+    else if(['length','keys','sort','unique'].includes(part)) L.push('<code>' + part + '</code>: ' + ({length:'đếm độ dài', keys:'liệt kê khóa', sort:'sắp xếp', unique:'bỏ trùng'}[part]) + '.');
+    else L.push('<code>' + esc(part) + '</code>');
+  }
+  if(L.length > 1) L.unshift('Dấu <code>|</code> bên trong bộ lọc nối các bước của jq, không phải pipe của shell.');
+  if(raw) L.push('Có <code>-r</code> nên chuỗi được in không kèm dấu ngoặc kép.');
+  return '<ul>' + L.map(x => '<li>' + x + '</li>').join('') + '</ul>';
+}
+const LOGS = {
+  '/var/log/auth.log':'log xác thực: đăng nhập SSH, sudo, su', '/var/log/syslog':'log hệ thống chung', '/var/log/kern.log':'log kernel',
+  '/var/log/apache2/access.log':'access log Apache: mỗi request HTTP một dòng', '/var/log/apache2/error.log':'error log Apache: lỗi PHP, lỗi cấu hình',
+  '/var/log/nginx/access.log':'access log Nginx', '/var/log/nginx/error.log':'error log Nginx', '/var/log/audit/audit.log':'log của auditd',
+  '/var/log/ufw.log':'log tường lửa UFW', '/var/log/dpkg.log':'lịch sử cài và gỡ gói phần mềm', '/var/log/fail2ban.log':'log Fail2ban: IP bị chặn',
+  '/var/log/suricata/eve.json':'log JSON của Suricata IDS', '/var/log/wtmp':'lịch sử đăng nhập (đọc bằng last)', '/var/log/btmp':'đăng nhập thất bại (đọc bằng lastb)',
+  '/etc/passwd':'danh sách tài khoản', '/etc/shadow':'hash mật khẩu (chỉ root đọc được)', '/dev/null':'thiết bị rỗng: mọi thứ ghi vào đều bị bỏ đi'
+};
+const BASES = {'access.log':'access log của web server','error.log':'error log của web server','auth.log':'log xác thực SSH/sudo','syslog':'log hệ thống','eve.json':'log JSON của Suricata','audit.log':'log của auditd'};
+function fileExplain(v){
+  if(v === '{}') return 'Chỗ này được thay bằng đường dẫn từng file mà find tìm thấy.';
+  const parts = [];
+  if(LOGS[v]) parts.push(LOGS[v]);
+  else { const b = v.split('/').pop().replace(/\.\d+(\.gz)?$/, '').replace(/\.\*.*$/, ''); if(BASES[b]) parts.push(BASES[b]); }
+  if(/[*?]/.test(v)) parts.push('có ký tự glob nên shell mở rộng thành nhiều file');
+  if(/\.gz$/.test(v)) parts.push('file nén gzip, đọc bằng zcat/zgrep');
+  return '<code>' + esc(v) + '</code>' + (parts.length ? ': ' + parts.join('; ') : '');
+}
+const JFIELDS = {_PID:'PID tiến trình', _UID:'UID', _COMM:'tên tiến trình', _EXE:'đường dẫn chương trình', _SYSTEMD_UNIT:'dịch vụ systemd', SYSLOG_IDENTIFIER:'tên nguồn ghi log', _HOSTNAME:'tên máy', PRIORITY:'mức độ'};
+
+function grepMode(base, used){
+  if(used.has('-F')) return 'F';
+  if(used.has('-P')) return 'P';
+  if(used.has('-E') || base === 'egrep') return 'E';
+  return 'B';
+}
+
+function addOptRow(def, op, name, val, w, step, used, combo){
+  op.f.forEach(f => used.add(f));
+  let html = op.d;
+  if(val != null){
+    html += ' Giá trị: <code>' + esc(val) + '</code>' + (op.vx ? ' → ' + op.vx(val) : '') + '.';
+    if(op.vrole === 'pattern') html += regexExplain(val, grepMode(step.base, used)).replace(/^([^<])/, '<br>$1');
+    if(op.vrole === 'script') html += sedExplain(val, used.has('-n'));
+    if(op.store) step[op.store] = val;
+  }
+  const disp = combo && combo !== name ? name + (val != null && combo.endsWith(val) ? val : '') + ' (trong ' + combo + ')' : null;
+  step.rows.push(row(w, 'opt', html, disp));
+  if(op.s){
+    const lv = val == null ? '' : val === ' ' ? 'dấu cách' : val === '\t' ? 'tab' : trunc(val, 18);
+    step.labels.push(op.lx && op.vx && val != null ? op.vx(val).replace(/<[^>]+>/g, '') : op.s.replace('{v}', lv));
+  }
+}
+function takeOpt(def, op, name, val, w, words, i, step, used, combo){
+  if(op.a && val == null){
+    const next = words[i+1];
+    if(op.ao){ if(next && op.ao.test(next.v)){ val = next.v; next.kind = 'val'; next.grp = w.ti; i++; } }
+    else if(op.a2){ const n2 = words[i+2]; if(next){ next.kind = 'val'; next.grp = w.ti; i++; val = next.v; } if(n2){ n2.kind = 'val'; n2.grp = w.ti; i++; val += ' = ' + n2.v; } }
+    else if(next){
+      val = next.v; next.kind = 'val'; next.grp = w.ti; i++;
+      if(op.at === 'time'){ const n2 = words[i+1]; if(n2 && /^\d{1,2}:\d{2}(:\d{2})?$/.test(n2.v)){ val += ' ' + n2.v; n2.kind = 'val'; n2.grp = w.ti; i++; } }
+    } else { step.rows.push(row(w, 'unk', '<code>' + esc(name) + '</code> cần một giá trị (' + esc(op.a) + ') nhưng không có gì phía sau.')); return i; }
+  }
+  addOptRow(def, op, name, val, w, step, used, combo);
+  return i;
+}
+
+function explainWords(words, ctx, depth){
+  const steps = [];
+  if(!words.length || depth > 4) return steps;
+  let i = 0; const pre = [];
+  while(i < words.length && /^[A-Za-z_]\w*=/.test(words[i].v)){ words[i].kind = 'env'; pre.push(row(words[i], 'env', 'Biến môi trường chỉ áp dụng cho lệnh này.')); i++; }
+  if(i >= words.length){ steps.push({base:'(biến)', def:null, rows:pre, labels:[], join:ctx.join || null}); return steps; }
+  const cw = words[i]; const base = cw.v.split('/').pop(); const def = DB[base]; cw.kind = 'cmd';
+  const step = {base, def, rows:pre, labels:[], join:ctx.join || null};
+  steps.push(step);
+  step.rows.push(row(cw, 'cmd', def ? '<b>' + esc(base) + '</b>: ' + def.sum : '<b>' + esc(base) + '</b> chưa có trong thư viện. Xem <code>man ' + esc(base) + '</code> hoặc <code>' + esc(base) + ' --help</code>.'));
+  if(!def){
+    words.slice(i+1).forEach(w => { const isO = w.v.length > 1 && w.v[0] === '-'; w.kind = isO ? 'unk' : 'arg'; step.rows.push(row(w, w.kind, isO ? 'Tham số của ' + esc(base) + ' (không có trong bảng tra).' : 'Đối số.')); });
+    return steps;
+  }
+  if(def.custom === 'find') parseFind(def, words, i+1, step, ctx, steps, depth);
+  else parseGeneric(def, base, words, i+1, step, ctx, steps, depth);
+  return steps;
+}
+
+function parseGeneric(def, base, words, start, step, ctx, steps, depth){
+  const map = optMap(def); const pos = []; let endOpts = false; const used = new Set();
+  for(let i = start; i < words.length; i++){
+    const w = words[i], v = w.v;
+    const looksOpt = v.length > 1 && (v[0] === '-' || (v[0] === '+' && map[v]));
+    if(def.nest && (!looksOpt || endOpts)){
+      const nctx = def.nest.op === 'xargs' ? {join:def.nest, viaXargs:true} : {join:def.nest, afterPipe:ctx.afterPipe, viaXargs:ctx.viaXargs};
+      steps.push(...explainWords(words.slice(i), nctx, depth + 1));
+      break;
+    }
+    if(!endOpts && v === '--'){ w.kind = 'opt'; step.rows.push(row(w, 'opt', '<code>--</code> kết thúc phần tham số; mọi thứ phía sau là đối số, kể cả khi bắt đầu bằng dấu -.')); endOpts = true; continue; }
+    if(!endOpts && def.numShort && /^-\d+$/.test(v)){ w.kind = 'opt'; const n = v.slice(1); step.rows.push(row(w, 'opt', 'Cách viết tắt của <code>-n ' + n + '</code>: ' + def.numShort.replace('{v}', n) + '.')); step.labels.push(def.numLabel.replace('{v}', n)); continue; }
+    if(endOpts || !looksOpt){ pos.push(w); continue; }
+    let name = v, val = null;
+    if(v.startsWith('--') && v.includes('=')){ name = v.slice(0, v.indexOf('=')); val = v.slice(v.indexOf('=') + 1); }
+    const op = map[name];
+    if(op){ w.kind = 'opt'; i = takeOpt(def, op, name, val, w, words, i, step, used); continue; }
+    if(v.startsWith('--') || v[0] === '+'){ w.kind = 'unk'; step.rows.push(row(w, 'unk', '<code>' + esc(v) + '</code> không có trong bảng tra của ' + esc(base) + '. Kiểm tra bằng <code>man ' + esc(base) + '</code>.')); continue; }
+    w.kind = 'opt'; let anyUnknown = false;
+    for(let j = 1; j < v.length; j++){
+      const key = '-' + v[j]; const so = map[key];
+      if(!so){ anyUnknown = true; step.rows.push(row(w, 'unk', '<code>' + esc(key) + '</code> (trong <code>' + esc(v) + '</code>) không có trong bảng tra của ' + esc(base) + '.', key + ' (trong ' + v + ')')); continue; }
+      if(so.attach){ const rest = v.slice(j+1); addOptRow(def, so, key, rest || null, w, step, used, v); if(rest) step.rows[step.rows.length-1].html += ' Bản sao lưu được lưu với đuôi <code>' + esc(rest) + '</code>.'; break; }
+      if(so.a){ const rest = v.slice(j+1); if(rest) addOptRow(def, so, key, rest, w, step, used, v); else i = takeOpt(def, so, key, null, w, words, i, step, used, v); break; }
+      addOptRow(def, so, key, null, w, step, used, v);
+    }
+    if(anyUnknown && v.length === 2) w.kind = 'unk';
+  }
+  assignPositional(def, base, pos, step, ctx, used);
+}
+
+function assignPositional(def, base, pos, step, ctx, used){
+  let roles = (def.pos || []).slice();
+  if(roles[0] === 'pattern' && (used.has('-e') || used.has('-f'))) roles.shift();
+  if(roles[0] === 'script' && (used.has('-e') || used.has('-f'))) roles.shift();
+  if(roles[0] === 'program' && used.has('-f')) roles.shift();
+  let r = 0, files = 0;
+  for(const w of pos){
+    const role = roles[Math.min(r, roles.length - 1)];
+    if(!role){ w.kind = 'arg'; step.rows.push(row(w, 'arg', 'Đối số cho ' + esc(base) + '.')); continue; }
+    const star = role.endsWith('*'); const rn = role.replace('*', '');
+    if(!star) r++;
+    if(rn === 'pattern'){ w.kind = 'pat'; step.rows.push(row(w, 'pat', 'Mẫu cần tìm.' + regexExplain(w.v, grepMode(base, used)).replace(/^([^<])/, '<br>$1'))); step.labels.push('mẫu "' + trunc(w.v, 22) + '"'); }
+    else if(rn === 'program'){ w.kind = 'pat'; step.rows.push(row(w, 'pat', 'Chương trình awk (phân tích tự động, gần đúng):' + awkExplain(w.v, step.fs))); step.labels.push(awkLabel(w.v)); }
+    else if(rn === 'script'){ w.kind = 'pat'; step.rows.push(row(w, 'pat', 'Script sed:' + sedExplain(w.v, used.has('-n')))); step.labels.push('script "' + trunc(w.v, 22) + '"'); }
+    else if(rn === 'filter'){ w.kind = 'pat'; step.rows.push(row(w, 'pat', 'Bộ lọc jq:' + jqExplain(w.v, used.has('-r')))); step.labels.push('lọc "' + trunc(w.v, 22) + '"'); }
+    else if(rn === 'set1' || rn === 'set2'){ w.kind = 'pat'; step.rows.push(row(w, 'pat', (rn === 'set1' ? 'Tập ký tự nguồn' : 'Tập ký tự đích') + ' <code>' + esc(w.v) + '</code>' + (/a-z|A-Z/.test(w.v) ? ' (dải chữ cái)' : '') + '.')); }
+    else if(rn === 'file' || rn === 'path'){ w.kind = 'file'; files++; step.rows.push(row(w, 'file', (rn === 'path' ? 'Đường dẫn: ' : 'File đầu vào: ') + fileExplain(w.v))); }
+    else if(rn === 'outfile'){ w.kind = 'file'; step.rows.push(row(w, 'file', 'File được ghi ra (ghi đè nếu không có -a): ' + fileExplain(w.v))); step.labels.push('→ ' + trunc(w.v, 20)); }
+    else if(rn === 'user'){ w.kind = 'arg'; step.rows.push(row(w, 'arg', 'Chỉ hiện bản ghi của user hoặc terminal <code>' + esc(w.v) + '</code>.')); }
+    else if(rn === 'field'){
+      const m = /^([A-Z_]+)=(.*)$/.exec(w.v);
+      if(m){ w.kind = 'pat'; step.rows.push(row(w, 'pat', 'Lọc theo trường journal <code>' + esc(m[1]) + '</code>' + (JFIELDS[m[1]] ? ' (' + JFIELDS[m[1]] + ')' : '') + ' bằng <code>' + esc(m[2]) + '</code>.')); step.labels.push(trunc(w.v, 22)); }
+      else { w.kind = 'file'; step.rows.push(row(w, 'file', 'Chỉ lấy log do chương trình này ghi: ' + fileExplain(w.v))); }
+    }
+    else { w.kind = 'arg'; step.rows.push(row(w, 'arg', 'Đối số.')); }
+  }
+  if(roles.some(x => x === 'file*') && files === 0){
+    if(ctx.viaXargs) step.rows.push(row(null, 'file', 'File do xargs đưa vào từ dữ liệu đầu vào.', '(từ xargs)'));
+    else if(ctx.afterPipe) step.rows.push(row(null, 'file', 'Không có file: đọc dữ liệu từ lệnh phía trước qua pipe.', '(stdin)'));
+    else if(!ctx.inRedirect) step.rows.push(row(null, 'unk', 'Không có file đầu vào: lệnh sẽ chờ dữ liệu gõ từ bàn phím. Có thể bạn quên tên file?', '(stdin)'));
+  }
+}
+
+function parseFind(def, words, start, step, ctx, steps, depth){
+  const map = optMap(def); let i = start; const paths = [];
+  while(i < words.length && !/^[-!(]/.test(words[i].v)){ paths.push(words[i]); i++; }
+  paths.forEach(p => { p.kind = 'file'; step.rows.push(row(p, 'file', 'Thư mục bắt đầu tìm: ' + fileExplain(p.v))); });
+  if(!paths.length) step.rows.push(row(null, 'file', 'Không ghi thư mục nên tìm trong thư mục hiện tại.', '(.)'));
+  const used = new Set();
+  for(; i < words.length; i++){
+    const w = words[i], v = w.v;
+    if(v === '!' ){ w.kind = 'opt'; step.rows.push(row(w, 'opt', 'Phủ định điều kiện ngay sau (giống -not).')); step.labels.push('không'); continue; }
+    if(v === '(' || v === ')'){ w.kind = 'op'; step.rows.push(row(w, 'op', v === '(' ? 'Mở nhóm điều kiện (thường viết <code>\\(</code>).' : 'Đóng nhóm điều kiện.')); continue; }
+    if(v === '-exec' || v === '-execdir' || v === '-ok'){
+      w.kind = 'opt'; let j = i + 1; const sub = [];
+      while(j < words.length && words[j].v !== ';' && words[j].v !== '+'){ sub.push(words[j]); j++; }
+      const term = words[j];
+      if(term){ term.kind = 'op'; term.grp = w.ti; }
+      step.rows.push(row(w, 'opt', map[v].d + (term ? (term.v === ';' ? ' Kết thúc bằng <code>\\;</code>: chạy lệnh một lần cho mỗi file.' : ' Kết thúc bằng <code>+</code>: gom nhiều file vào một lần chạy.') : ' <span class="warn">⚠ Thiếu <code>\\;</code> hoặc <code>+</code> ở cuối.</span>')));
+      step.labels.push(v.slice(1));
+      if(sub.length) steps.push(...explainWords(sub, {join:{op:v, text:'với mỗi file tìm được, chạy'}, viaFind:true}, depth + 1));
+      i = j; continue;
+    }
+    const op = map[v];
+    if(op){ w.kind = 'opt'; i = takeOpt(def, op, v, null, w, words, i, step, used); continue; }
+    w.kind = v[0] === '-' ? 'unk' : 'arg';
+    step.rows.push(row(w, w.kind, v[0] === '-' ? '<code>' + esc(v) + '</code> không có trong bảng tra của find.' : 'Đối số.'));
+  }
+}
+
+const JOINS = {'|':'chuyển đầu ra vào', '&&':'nếu thành công thì chạy', '||':'nếu thất bại thì chạy', ';':'sau đó chạy', '&':'chạy nền, đồng thời chạy'};
+function redirText(op, target){
+  const t = target ? fileExplain(target.v) : '';
+  if(/&[\d-]$/.test(op)) return op === '2>&1' ? 'Gộp thông báo lỗi (stderr) vào cùng đầu ra (stdout).' : op === '>&2' || op === '1>&2' ? 'Đưa đầu ra sang luồng lỗi (stderr).' : 'Chuyển hướng luồng ' + esc(op) + '.';
+  if(target && target.v === '/dev/null') return op.startsWith('2') ? 'Bỏ đi thông báo lỗi (ví dụ "Permission denied").' : op.startsWith('&') ? 'Bỏ đi cả kết quả lẫn thông báo lỗi.' : 'Bỏ đi kết quả.';
+  if(op === '>' || op === '1>') return 'Ghi kết quả vào file (ghi đè nếu đã có): ' + t;
+  if(op === '>>' || op === '1>>') return 'Ghi nối kết quả vào cuối file: ' + t;
+  if(op === '<') return 'Lấy dữ liệu đầu vào từ file: ' + t;
+  if(op === '<<<') return 'Đưa chuỗi ngay sau làm dữ liệu đầu vào.';
+  if(op === '2>') return 'Ghi thông báo lỗi vào file: ' + t;
+  if(op === '2>>') return 'Ghi nối thông báo lỗi vào file: ' + t;
+  if(op === '&>' || op === '&>>') return 'Ghi cả kết quả và lỗi vào file: ' + t;
+  return 'Chuyển hướng ' + esc(op) + '.';
+}
+
+function explain(line){
+  const toks = tokenize(line);
+  toks.forEach((t, i) => { t.ti = i; t.kind = t.k === 'op' ? 'op' : 'arg'; });
+  const segs = []; let cur = {words:[], redirs:[]}; const joins = [];
+  for(let i = 0; i < toks.length; i++){
+    const t = toks[i];
+    if(t.k === 'op'){
+      if(JOINS[t.v]){ segs.push(cur); joins.push(t); cur = {words:[], redirs:[]}; continue; }
+      t.kind = 'redir'; let target = null;
+      if(!/&[\d-]$/.test(t.v)){ const n = toks[i+1]; if(n && n.k === 'w'){ target = n; n.kind = 'file'; n.grp = t.ti; i++; } }
+      cur.redirs.push({t, target}); continue;
+    }
+    cur.words.push(t);
+  }
+  segs.push(cur);
+  const steps = [];
+  segs.forEach((seg, s) => {
+    const prev = s > 0 ? joins[s-1] : null;
+    const ctx = {join: prev ? {op:prev.v, text:JOINS[prev.v], ti:prev.ti} : null, afterPipe: prev && prev.v === '|', inRedirect: seg.redirs.some(r => r.t.v === '<' || r.t.v === '<<<')};
+    const st = explainWords(seg.words, ctx, 0);
+    if(!st.length && seg.redirs.length) st.push({base:'(chuyển hướng)', def:null, rows:[], labels:[], join:ctx.join});
+    const last = st[0];
+    seg.redirs.forEach(r => { if(last){ last.rows.push(row(r.t, 'redir', redirText(r.t.v, r.target), r.t.raw + (r.target ? ' ' + r.target.raw : ''))); last.labels.push(r.t.v + (r.target ? ' ' + trunc(r.target.v, 16) : '')); } });
+    steps.push(...st);
+  });
+  const trailing = joins.length >= segs.length || (segs.length && !segs[segs.length-1].words.length && joins.length);
+  return {toks, steps, trailing};
+}
+</script>
+<script>
+(function(){
+  const $ = id => document.getElementById(id);
+  const cmdIn = $('cmdIn'), xOut = $('xOut');
+
+  function renderExplain(){
+    const line = cmdIn.value.trim();
+    if(!line){ xOut.innerHTML = '<div class="empty">Dán một câu lệnh vào ô trên, hoặc bấm Phân tích ở một công thức bên dưới.</div>'; $('xStatus').textContent = ''; return; }
+    let res;
+    try { res = explain(line); } catch(e){ xOut.innerHTML = '<div class="empty warn">Không phân tích được câu lệnh này: ' + esc(e.message) + '</div>'; return; }
+    const strip = '<div class="strip" id="strip">' + res.toks.map(t => '<span class="tk k-' + t.kind + '" data-ti="' + (t.grp != null ? t.grp : t.ti) + '">' + esc(t.raw) + '</span>').join(' ') + '</div>';
+    const flow = '<div class="flow" aria-label="Tóm tắt luồng xử lý">' + res.steps.map((s, i) =>
+      (s.join && i > 0 ? '<span class="fjoin">' + esc(s.join.op) + '</span>' : '') +
+      '<span class="fstep"><b>' + esc(s.base) + '</b>' + (s.labels.length ? ' · ' + esc(s.labels.join(', ')) : '') + '</span>').join('') + '</div>';
+    const unk = res.toks.filter(t => t.kind === 'unk').length;
+    const steps = res.steps.map((s, i) =>
+      '<div class="step"><div class="step-h"><span class="n">BƯỚC ' + (i+1) + '</span>' +
+      (s.join && i > 0 ? '<span class="j">' + esc(s.join.op) + ' ' + esc(s.join.text) + '</span>' : '') +
+      '<span class="c">' + esc(s.base) + '</span>' + (s.def ? '<span class="s">' + esc(CATS[s.def.cat]) + '</span>' : '') + '</div>' +
+      '<table class="xt"><tbody>' + s.rows.map(r =>
+        '<tr' + (r.ti != null ? ' data-ti="' + r.ti + '"' : '') + '><td class="t"><span class="k-' + r.kind + '">' + esc(r.tok) + '</span></td><td>' + r.html + '</td></tr>').join('') +
+      '</tbody></table></div>').join('');
+    xOut.innerHTML = strip + flow + steps + (res.trailing ? '<div class="empty warn">⚠ Câu lệnh kết thúc bằng | hoặc &amp;&amp; mà chưa có lệnh phía sau.</div>' : '');
+    $('xStatus').textContent = res.steps.length + ' bước' + (unk ? ', ' + unk + ' phần không nhận ra' : '');
+  }
+
+  // Đồng bộ tô sáng giữa dải token và bảng giải thích
+  xOut.addEventListener('mouseover', e => {
+    const el = e.target.closest('[data-ti]'); xOut.querySelectorAll('.hl').forEach(x => x.classList.remove('hl'));
+    if(!el) return; const ti = el.dataset.ti;
+    xOut.querySelectorAll('[data-ti="' + ti + '"]').forEach(x => (x.tagName === 'TR' ? x.querySelector('td.t span') : x).classList.add('hl'));
+  });
+  xOut.addEventListener('mouseleave', () => xOut.querySelectorAll('.hl').forEach(x => x.classList.remove('hl')));
+
+  let timer = null;
+  cmdIn.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(renderExplain, 300); });
+  cmdIn.addEventListener('keydown', e => { if(e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); renderExplain(); } });
+  $('xBtn').addEventListener('click', renderExplain);
+  $('xClear').addEventListener('click', () => { cmdIn.value = ''; renderExplain(); cmdIn.focus(); });
+  async function copyText(text, btn){
+    const old = btn.textContent;
+    try { await navigator.clipboard.writeText(text); btn.textContent = 'Đã copy'; }
+    catch(e){ btn.textContent = 'Không copy được, hãy chọn và Ctrl+C'; }
+    setTimeout(() => { btn.textContent = old; }, 1600);
+  }
+  $('xCopy').addEventListener('click', e => copyText(cmdIn.value, e.currentTarget));
+  function load(cmd){ cmdIn.value = cmd; renderExplain(); cmdIn.scrollIntoView({behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block:'start'}); }
+
+  // ---------- Tra cứu ----------
+  let cat = null; const open = new Set();
+  $('cats').innerHTML = '<button type="button" class="chip" data-c="" aria-pressed="true">Tất cả</button>' + Object.entries(CATS).map(([k, v]) => '<button type="button" class="chip" data-c="' + k + '" aria-pressed="false">' + esc(v) + '</button>').join('');
+  $('cats').addEventListener('click', e => { const b = e.target.closest('.chip'); if(!b) return; cat = b.dataset.c || null; $('cats').querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === b))); renderSearch(); });
+
+  function hlText(text, terms){
+    let out = esc(text);
+    terms.filter(t => t.length > 1 && !/^[a-z0-9]$/.test(t)).forEach(t => {
+      const re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+      if(norm(text) === text.toLowerCase()) out = out.replace(re, '<mark>$1</mark>');
+    });
+    return out;
+  }
+  function optRow(op, terms){
+    return '<tr><td class="f">' + op.f.map(f => '<div>' + hlText(f, terms) + (op.a ? ' <i>' + esc(op.a) + '</i>' : '') + '</div>').join('') + '</td><td>' + hlText(op.d, terms) + '</td></tr>';
+  }
+  function card(name, def, opts, terms, matchedOnly){
+    const showAll = open.has(name) || !matchedOnly;
+    const list = showAll ? def.opts : opts;
+    const body = list.length ? '<div class="opts"><table class="ot"><tbody>' + list.map(op => optRow(op, terms)).join('') + '</tbody></table></div>' : (def.opts.length ? '' : '<div class="more hint">Lệnh này dùng chung tham số với lệnh liên quan hoặc gần như không có tham số.</div>');
+    const more = matchedOnly && def.opts.length > opts.length ? '<div class="more"><button type="button" class="link" data-open="' + name + '">' + (open.has(name) ? 'Chỉ hiện tham số khớp' : 'Xem tất cả ' + def.opts.length + ' tham số') + '</button></div>' : '';
+    const exs = def.ex.length && (showAll || !opts.length) ? '<div class="exs">' + def.ex.map(x => '<div class="ex"><code>' + esc(x[0]) + '</code><button type="button" data-cmd="' + esc(x[0]) + '">Phân tích</button><span class="d">' + esc(x[1]) + '</span></div>').join('') + '</div>' : '';
+    return '<article class="cmd"><div class="cmd-h"><span class="cat">' + esc(CATS[def.cat]) + '</span><span class="name">' + esc(name) + '</span><p>' + esc(def.sum) + '</p><span class="syn">' + esc(def.syn) + '</span></div>' + body + more + exs + '</article>';
+  }
+  function renderSearch(){
+    const raw = $('q').value.trim();
+    const terms = raw ? raw.split(/\s+/) : [];
+    let cmdFilter = null; let rest = terms.slice();
+    if(rest.length && DB[rest[0].toLowerCase()]){ cmdFilter = rest[0].toLowerCase(); rest = rest.slice(1); }
+    const nterms = rest.map(norm);
+    const out = [];
+    for(const [name, def] of Object.entries(DB)){
+      if(cat && def.cat !== cat) continue;
+      if(cmdFilter && name !== cmdFilter) continue;
+      if(!nterms.length){ out.push({name, def, opts:[], matchedOnly:false, score:0}); continue; }
+      const flagTerms = nterms.filter(t => /^[-+]/.test(t));
+      const opts = def.opts.filter(op => {
+        const hay = norm(op.f.join(' ') + ' ' + op.d + ' ' + op.s + ' ' + (op.a || ''));
+        return nterms.every(t => /^[-+]/.test(t) ? op.f.some(f => f.toLowerCase() === t || (t.length > 2 && f.toLowerCase().startsWith(t))) : hay.includes(t));
+      });
+      const cmdHay = norm(name + ' ' + def.sum + ' ' + def.kw);
+      const cmdHit = !flagTerms.length && nterms.every(t => cmdHay.includes(t));
+      if(opts.length || cmdHit) out.push({name, def, opts, matchedOnly: opts.length > 0, score: (cmdFilter ? 100 : 0) + opts.length + (cmdHit ? 50 : 0)});
+    }
+    out.sort((a, b) => b.score - a.score);
+    $('sOut').innerHTML = out.length ? '<div class="results">' + out.map(x => card(x.name, x.def, x.opts, rest, x.matchedOnly)).join('') + '</div>' :
+      '<div class="empty">Không tìm thấy tham số nào khớp "' + esc(raw) + '". Thử từ khóa khác, ví dụ "đếm", "theo dõi", "bỏ qua", hoặc tên lệnh.</div>';
+  }
+  $('q').addEventListener('input', renderSearch);
+  $('sOut').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.open){ const n = b.dataset.open; open.has(n) ? open.delete(n) : open.add(n); renderSearch(); }
+    else if(b.dataset.cmd) load(b.dataset.cmd);
+  });
+
+  // ---------- Công thức ----------
+  $('recipes').innerHTML = RECIPES.map((r, i) => '<div class="rc"><h3>' + esc(r.t) + '</h3><p>' + esc(r.d) + '</p><code>' + esc(r.c) + '</code><div class="row"><button type="button" class="primary" data-r="' + i + '">Phân tích</button><button type="button" data-copy="' + i + '">Copy</button></div></div>').join('');
+  $('recipes').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b) return;
+    if(b.dataset.r) load(RECIPES[+b.dataset.r].c);
+    else if(b.dataset.copy) copyText(RECIPES[+b.dataset.copy].c, b);
+  });
+
+  cmdIn.value = RECIPES[0].c;
+  renderExplain();
+  renderSearch();
+})();
+</script>
+</body>
+</html>

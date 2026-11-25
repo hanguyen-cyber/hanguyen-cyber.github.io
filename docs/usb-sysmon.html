@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Điều tra USB-Sysmon.evtx — Hướng dẫn step by step</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0e1117; --card:#161b24; --card2:#1c2230; --ink:#e3e8f1; --muted:#9aa5b8; --line:#2a3242;
+    --accent:#7aa2ff; --accent-soft:#1c2a4a; --warn:#f5b45a; --warn-soft:#2e2313;
+    --bad:#ff7b72; --bad-soft:#331a1a; --ok:#56d391; --ok-soft:#14291f;
+    --code:#0a0d13; --code-ink:#dfe6f3; --inline:#232b3b; --th:#1f2636;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;font-size:15.5px}
+  header{background:linear-gradient(135deg,#0d1a3a,#24418f);border-bottom:1px solid var(--line);color:#fff;padding:36px 24px 30px}
+  header .wrap{max-width:1040px;margin:auto}
+  header h1{margin:0 0 6px;font-size:28px}
+  header p{margin:0;opacity:.9}
+  nav.toc{max-width:1040px;margin:18px auto 0;padding:0 24px;display:flex;flex-wrap:wrap;gap:8px}
+  nav.toc a{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 13px;color:var(--ink);text-decoration:none;font-size:14px}
+  nav.toc a:hover{background:var(--card2);border-color:var(--accent);color:var(--accent)}
+  main{max-width:1040px;margin:auto;padding:10px 24px 60px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin:22px 0}
+  h2{margin:0 0 14px;font-size:22px}
+  h3{margin:22px 0 8px;font-size:17.5px}
+  .muted{color:var(--muted)}
+  code{font-family:Consolas,"Cascadia Code",monospace;font-size:13.5px;background:var(--inline);color:#ffd59a;padding:1px 6px;border-radius:5px}
+  pre{position:relative;border:1px solid var(--line);background:var(--code);color:var(--code-ink);padding:16px 16px 14px;border-radius:10px;overflow:auto;font-size:13.5px;line-height:1.5;margin:10px 0 14px}
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  .copy{position:absolute;top:8px;right:8px;background:#2a3348;color:#cfd8ea;border:0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .copy:hover{background:#3a4662}
+  .c{color:#7f8ca6} .k{color:#9cc3ff} .s{color:#b9e6a5} .v{color:#ffcf8a}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;margin:8px 0 6px}
+  th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--th);font-weight:600}
+  .pill{display:inline-block;border-radius:6px;padding:0 8px;font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent)}
+  .box{border-radius:10px;padding:12px 16px;margin:12px 0}
+  .tip{background:var(--accent-soft);border-left:4px solid var(--accent)}
+  .warn{background:var(--warn-soft);border-left:4px solid var(--warn)}
+  .bad{background:var(--bad-soft);border-left:4px solid var(--bad)}
+  .ok{background:var(--ok-soft);border-left:4px solid var(--ok)}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;background:var(--card2)}
+  details summary{cursor:pointer;font-weight:600}
+  .answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+  .ans{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
+  .ans .q{font-size:13px;color:var(--muted)}
+  .ans .a{color:var(--ok);font-family:Consolas,monospace;font-weight:700;font-size:15px;word-break:break-all;margin-top:4px}
+  .ans .src{font-size:12.5px;color:var(--muted);margin-top:4px}
+  /* flow */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:14px 0}
+  .flow .st{flex:1 1 170px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card2);position:relative}
+  .flow .st b{display:block;font-size:15px}
+  .flow .arrow{display:flex;align-items:center;padding:0 6px;color:var(--muted);font-size:22px}
+  .flow .st .ids{margin-top:6px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:16px}
+  .tabs button{border:0;background:none;padding:10px 16px;font-size:15.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .tabs button.active{color:var(--accent);border-color:var(--accent)}
+  .panel{display:none}
+  .panel.active{display:block}
+  .step{border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:20px 0}
+  .step > h3{margin-top:0}
+  .stepno{display:inline-block;background:var(--accent);color:#0e1117;border-radius:6px;padding:0 8px;margin-right:6px;font-size:14px}
+  /* tree */
+  .tree{font-family:Consolas,monospace;font-size:13.5px;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre;line-height:1.55}
+  .tree .m{color:var(--bad);font-weight:700}
+  .tree .g{color:var(--muted)}
+  /* timeline */
+  .tl{position:relative;margin:10px 0 0 8px;padding-left:22px;border-left:2px solid var(--line)}
+  .tl .it{position:relative;margin:0 0 14px}
+  .tl .it::before{content:"";position:absolute;left:-29px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--card);box-shadow:0 0 0 1px var(--accent)}
+  .tl .it.red::before{background:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+  .tl .t{font-family:Consolas,monospace;font-size:13px;color:var(--muted)}
+  .kbd{border:1px solid #4a5568;border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:13px;background:var(--card2);font-family:inherit}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.two{grid-template-columns:1fr}.flow .arrow{display:none}.flow .st{margin:4px 0}}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 40px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🔌 Điều tra USB-Sysmon.evtx</h1>
+    <p>Hướng dẫn từng bước tìm: file trên USB mà user đã chạy → file malware thả xuống ổ đĩa → USB khác mà malware lây sang. Làm theo 2 cách: <b>PowerShell</b> và <b>Event Viewer</b>.</p>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#answers">Đáp án</a>
+  <a href="#mental">Tư duy điều tra</a>
+  <a href="#ids">Bảng Event ID</a>
+  <a href="#howto">Step by step</a>
+  <a href="#parent">Quan hệ cha – con</a>
+  <a href="#timeline">Timeline tấn công</a>
+  <a href="#pitfalls">Bẫy thường gặp</a>
+</nav>
+
+<main>
+
+<section id="answers">
+  <h2>🎯 Đáp án (bấm để mở — nên tự làm trước)</h2>
+  <details>
+    <summary>Hiện đáp án</summary>
+    <div class="answers">
+      <div class="ans"><div class="q">1. File trên USB được user chạy</div><div class="a">E:\Open Sandisk 4GB USB.exe</div><div class="src">Event ID 1 · PID 1108 · cha là explorer.exe (PID 2788) · Record 4928</div></div>
+      <div class="ans"><div class="q">2. File đáng ngờ malware thả xuống ổ đĩa</div><div class="a">C:\Users\Public\Documents\winupdate.exe</div><div class="src">Event ID 11 · Image = E:\Open Sandisk 4GB USB.exe · Record 4929</div></div>
+      <div class="ans"><div class="q">3. USB khác mà malware lây sang</div><div class="a">F:\Open Data Traveler 32 GB USB.exe</div><div class="src">Event ID 11 · ổ F: (USB thứ hai, đã cắm vào máy từ trước) · Record 4931</div></div>
+    </div>
+    <p class="muted" style="margin:10px 0 0">Bonus: malware tạo persistence bằng registry Run key <code>…\CurrentVersion\Run\WinUpdate</code> → <code>C:\Users\Public\Documents\winupdate.exe</code> (Event ID 13, Record 4930).</p>
+  </details>
+  <p class="muted" style="margin-bottom:0">File log có 39 event, Record ID 4901 → 4939, thời gian 2025-05-20 19:31–19:35 (UTC), máy <code>THM-PC</code>, user <code>THM-PC\Administrator</code>.</p>
+</section>
+
+<section id="mental">
+  <h2>🧠 Tư duy điều tra: USB worm đi đường nào?</h2>
+  <p>Bài này khác bài Phishing: file độc không đến từ Internet mà <b>nằm sẵn trên USB</b>. Hãy hình dung nó như <b>một người lạ cầm thẻ nhân viên giả</b>: file tên "Open Sandisk 4GB USB.exe" giả làm nút "mở ổ USB", user tưởng bấm vào để xem dữ liệu, thực ra là mời nó vào nhà. Vào rồi, nó làm 3 việc quen thuộc của USB worm:</p>
+
+  <div class="flow">
+    <div class="st"><b>① Được chạy</b>User double-click file .exe trên ổ E:<div class="ids"><span class="pill">ID 1</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>② Thả file</b>Ghi bản sao xuống ổ C:<div class="ids"><span class="pill">ID 11</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>③ Bám trụ</b>Thêm Run key để tự chạy khi đăng nhập<div class="ids"><span class="pill">ID 13</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>④ Lây lan</b>Chép chính nó sang USB khác (F:)<div class="ids"><span class="pill">ID 11</span></div></div>
+  </div>
+
+  <table>
+    <tr><th>Câu hỏi</th><th>Chặng</th><th>Event ID cần lọc</th><th>Mẹo nhận diện</th></tr>
+    <tr><td>File USB nào được user chạy?</td><td>①</td><td><span class="pill">1</span></td><td><code>Image</code> nằm ở ổ <b>khác C:</b> (E:\, F:\…), <code>ParentImage</code> = explorer.exe</td></tr>
+    <tr><td>Malware thả file gì xuống đĩa?</td><td>②</td><td><span class="pill">11</span></td><td><code>Image</code> (hoặc <code>ProcessGuid</code>) = process ở ①, xem <code>TargetFilename</code> trên ổ C:</td></tr>
+    <tr><td>Malware lây sang USB nào?</td><td>④</td><td><span class="pill">11</span></td><td>Cùng process ở ①, nhưng <code>TargetFilename</code> nằm ở <b>ổ khác</b> (không phải C:, không phải ổ nguồn E:)</td></tr>
+  </table>
+
+  <div class="box tip"><b>Chìa khoá của bài này: ký tự ổ đĩa.</b> Trên Windows, ổ hệ thống gần như luôn là <code>C:</code>. Một file thực thi chạy từ <code>E:\</code> hay <code>F:\</code> thường là USB, ổ mạng hoặc ổ gắn ngoài. Chỉ cần lọc "đường dẫn không bắt đầu bằng <code>C:\</code>" là các thứ đến từ USB lộ ra ngay.</div>
+  <div class="box tip"><b>Xâu chuỗi vẫn bằng <code>ProcessGuid</code></b> (như số CCCD của process). Bài này còn có ví dụ thật về chuyện PID bị dùng lại, xem mục <a href="#pitfalls" style="color:var(--accent)">Bẫy thường gặp</a>.</div>
+</section>
+
+<section id="ids">
+  <h2>📋 Bảng Event ID Sysmon xuất hiện trong file này</h2>
+  <table>
+    <tr><th>ID</th><th>Tên (Task Category)</th><th>Số lượng</th><th>Ý nghĩa / field quan trọng</th></tr>
+    <tr><td><span class="pill">1</span></td><td>Process Create</td><td>16</td><td><code>Image</code>, <code>CommandLine</code>, <code>CurrentDirectory</code>, <code>ProcessId</code>, <code>ProcessGuid</code>, <code>ParentImage</code>, <code>ParentProcessGuid</code>. Phần lớn là Google Updater / Edge Update (nhiễu).</td></tr>
+    <tr><td><span class="pill">11</span></td><td>File created</td><td>3</td><td><code>Image</code> = ai tạo file, <code>TargetFilename</code> = file được tạo ở đâu. <b>2 trong 3 event là của malware.</b></td></tr>
+    <tr><td><span class="pill">13</span></td><td>Registry value set</td><td>5</td><td><code>TargetObject</code> = khoá registry, <code>Details</code> = giá trị ghi vào. Khoá <code>…\CurrentVersion\Run\</code> = chương trình tự chạy khi user đăng nhập (persistence).</td></tr>
+    <tr><td><span class="pill">22</span></td><td>DNS query</td><td>8</td><td>Toàn bộ là chrome.exe tra <code>wpad</code>, <code>internal.tryhackme.thm</code>… → nhiễu. Malware <b>không</b> tra DNS nào.</td></tr>
+    <tr><td><span class="pill">10</span></td><td>Process accessed</td><td>7</td><td>svchost / EdgeUpdate truy cập lsass với <code>0x1000</code> → nhiễu bình thường của Windows.</td></tr>
+  </table>
+  <div class="box warn">Không có Event ID 5 (Process terminated) cho malware, không có ID 3 (network). Nghĩa là trong khoảng thời gian log được ghi, malware không gọi mạng và chưa thấy nó tắt. Log là "đoạn băng" có đầu có cuối, không phải toàn bộ câu chuyện.</div>
+</section>
+
+<section id="howto">
+  <h2>🛠️ Step by step</h2>
+  <div class="tabs">
+    <button class="active" data-tab="ps">⚡ Cách 1 — PowerShell</button>
+    <button data-tab="ev">🖥️ Cách 2 — Event Viewer</button>
+  </div>
+
+  <div class="panel active" id="ps">
+    <div class="box warn">Chạy trên Windows PowerShell 5.1 hoặc PowerShell 7 trên Windows. Sửa <code>$Path</code> thành đường dẫn thật của file .evtx.</div>
+
+    <div class="step">
+      <h3><span class="stepno">B0</span>Nạp log và tách field thành cột</h3>
+      <p>Giống bài Phishing: biến mỗi <code>&lt;Data Name="..."&gt;</code> trong XML thành một cột để lọc cho dễ.</p>
+<pre><code><span class="v">$Path</span> = <span class="s">"C:\Labs\USB-Sysmon.evtx"</span>   <span class="c"># &lt;-- sửa đường dẫn</span>
+<span class="v">$Raw</span>  = <span class="k">Get-WinEvent</span> -Path <span class="v">$Path</span> -Oldest
+
+<span class="k">function</span> ConvertTo-SysmonObject {
+    <span class="k">process</span> {
+        <span class="v">$xml</span> = [xml]<span class="v">$_</span>.ToXml()
+        <span class="v">$o</span> = [ordered]@{
+            RecordId = <span class="v">$_</span>.RecordId
+            EventId  = <span class="v">$_</span>.Id
+            Time     = <span class="v">$_</span>.TimeCreated
+        }
+        <span class="k">foreach</span> (<span class="v">$d</span> <span class="k">in</span> <span class="v">$xml</span>.Event.EventData.Data) { <span class="v">$o</span>[<span class="v">$d</span>.Name] = <span class="v">$d</span>.<span class="s">'#text'</span> }
+        [pscustomobject]<span class="v">$o</span>
+    }
+}
+
+<span class="v">$Ev</span> = <span class="v">$Raw</span> | ConvertTo-SysmonObject
+<span class="v">$Ev</span>.Count     <span class="c"># 39</span></code></pre>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B1</span>Tổng quan</h3>
+<pre><code><span class="v">$Ev</span> | <span class="k">Group-Object</span> EventId | <span class="k">Sort-Object</span> Count -Descending | <span class="k">Select-Object</span> Count, Name</code></pre>
+      <p>Kết quả: ID 1 (16), 22 (8), 10 (7), 13 (5), 11 (3). Có ID 1 → biết được ai chạy cái gì; có ID 11 → biết được file nào được tạo ở đâu; có ID 13 → có thay đổi registry.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B2</span>File USB nào được user chạy? <span class="pill">ID 1</span></h3>
+      <p><b>a) Tìm process chạy từ ổ khác C:</b></p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.Image <span class="k">-notmatch</span> <span class="s">'^C:\\'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, ProcessId, ProcessGuid, Image, CurrentDirectory, ParentImage</code></pre>
+      <p class="muted">Trong regex, <code>^C:\\</code> nghĩa là "bắt đầu bằng C:\" (dấu <code>\</code> phải viết đôi). <code>-notmatch</code> lấy những dòng <b>không</b> khớp.</p>
+      <details><summary>Kết quả mong đợi</summary>
+<pre><code>RecordId         : 4928
+ProcessId        : 1108
+ProcessGuid      : {c5d2b969-d92e-682c-9205-000000001801}
+Image            : E:\Open Sandisk 4GB USB.exe
+CurrentDirectory : E:\
+ParentImage      : C:\Windows\explorer.exe</code></pre>
+      → User double-click (cha là explorer.exe) file <b>E:\Open Sandisk 4GB USB.exe</b>, PID 1108.</details>
+
+      <p><b>b) Mở rộng: có ổ USB nào khác xuất hiện trong CommandLine không?</b></p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.CommandLine <span class="k">-match</span> <span class="s">'\b[D-Z]:\\'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, Image, CommandLine | <span class="k">Format-List</span></code></pre>
+      <p>Bạn sẽ thấy thêm Record 4916: chrome.exe mở <code>F:\tryhackme-report-2025.pdf</code> lúc 19:31:56. Nghĩa là <b>ổ F: đã được cắm vào máy từ trước</b>. Thông tin này sẽ có ích ở B4. Đây là mở file PDF để xem chứ không phải "chạy" chương trình, nên không phải đáp án câu 1.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B3</span>Malware thả file gì xuống ổ đĩa? <span class="pill">ID 11</span> <span class="pill">ID 13</span></h3>
+      <p>Lấy GUID của malware ở B2, rồi tìm mọi file nó tạo ra:</p>
+<pre><code><span class="v">$Mal</span> = <span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.Image <span class="k">-eq</span> <span class="s">'E:\Open Sandisk 4GB USB.exe'</span> }
+
+<span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 11 <span class="k">-and</span> <span class="v">$_</span>.ProcessGuid <span class="k">-eq</span> <span class="v">$Mal</span>.ProcessGuid } |
+      <span class="k">Select-Object</span> RecordId, Time, TargetFilename</code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+<pre><code>RecordId Time                 TargetFilename
+-------- ----                 --------------
+    4929 ... 19:34:06         C:\Users\Public\Documents\winupdate.exe
+    4931 ... 19:34:06         F:\Open Data Traveler 32 GB USB.exe</code></pre>
+      → File thả xuống ổ đĩa hệ thống: <b>C:\Users\Public\Documents\winupdate.exe</b>. Tên "winupdate" giả làm Windows Update, đặt trong thư mục <code>Public</code> mà mọi user đều ghi được.</details>
+
+      <p><b>Kiểm tra persistence</b>: file thả xuống có được cài để tự chạy không?</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 13 <span class="k">-and</span> <span class="v">$_</span>.ProcessGuid <span class="k">-eq</span> <span class="v">$Mal</span>.ProcessGuid } |
+      <span class="k">Select-Object</span> RecordId, TargetObject, Details | <span class="k">Format-List</span></code></pre>
+      <p class="muted">→ <code>HKU\…\Software\Microsoft\Windows\CurrentVersion\Run\WinUpdate</code> = <code>C:\Users\Public\Documents\winupdate.exe</code>. Mỗi lần Administrator đăng nhập, winupdate.exe sẽ tự chạy.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B4</span>Malware lây sang USB nào? <span class="pill">ID 11</span></h3>
+      <p>Trong các file malware tạo ra, file nào nằm ở ổ <b>không phải C:</b> và <b>không phải ổ nguồn E:</b>?</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 11 <span class="k">-and</span> <span class="v">$_</span>.TargetFilename <span class="k">-notmatch</span> <span class="s">'^C:\\'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, Image, TargetFilename</code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+      Record 4931: <code>E:\Open Sandisk 4GB USB.exe</code> tạo <b>F:\Open Data Traveler 32 GB USB.exe</b>.<br>
+      → Malware lây sang USB ở <b>ổ F:</b>, đặt tên giả "Open Data Traveler 32 GB USB.exe". Data Traveler là dòng USB của Kingston, cùng một chiêu đội lốt như file gốc trên ổ E: (SanDisk). Kết hợp với B2b (PDF trên F:) → khẳng định F: là một USB khác.</details>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B5</span>Toàn bộ hành vi của malware + cây process</h3>
+<pre><code><span class="c"># Mọi event mang GUID của malware</span>
+<span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.ProcessGuid <span class="k">-eq</span> <span class="v">$Mal</span>.ProcessGuid } |
+      <span class="k">Select-Object</span> RecordId, Time, EventId, TargetFilename, TargetObject
+
+<span class="c"># Cây process (giống bài Phishing)</span>
+<span class="k">function</span> Show-Tree(<span class="v">$Guid</span>, <span class="v">$Indent</span> = 0) {
+    <span class="v">$kids</span> = <span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.ParentProcessGuid <span class="k">-eq</span> <span class="v">$Guid</span> }
+    <span class="k">foreach</span> (<span class="v">$k</span> <span class="k">in</span> <span class="v">$kids</span>) {
+        <span class="s">'{0}|-- [{1}] {2}'</span> -f (<span class="s">' '</span> * <span class="v">$Indent</span>), <span class="v">$k</span>.ProcessId, <span class="v">$k</span>.CommandLine
+        Show-Tree <span class="v">$k</span>.ProcessGuid (<span class="v">$Indent</span> + 4)
+    }
+}
+Show-Tree <span class="s">'{c5d2b969-2e42-682b-4a02-000000001801}'</span>   <span class="c"># explorer.exe (PID 2788)</span></code></pre>
+      <p class="muted">Kết quả: explorer có 2 con là chrome.exe (6588) và <b>Open Sandisk 4GB USB.exe (1108)</b>. Malware không sinh process con nào.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">⚡</span>Lọc nhanh bằng FilterXPath (cho log lớn)</h3>
+<pre><code><span class="c"># Mọi file do malware tạo (so khớp chính xác GUID)</span>
+<span class="k">Get-WinEvent</span> -Path <span class="v">$Path</span> -FilterXPath <span class="s">"*[System[EventID=11] and EventData[Data[@Name='ProcessGuid']='{c5d2b969-d92e-682c-9205-000000001801}']]"</span> |
+    <span class="k">Format-List</span> TimeCreated, Message</code></pre>
+    </div>
+  </div>
+
+  <div class="panel" id="ev">
+    <div class="step">
+      <h3><span class="stepno">B0</span>Mở file .evtx (kèm .MTA)</h3>
+      <ol>
+        <li>Đặt <code>USB-Sysmon.evtx</code> vào <code>C:\Labs\</code>, và <code>USB-Sysmon_1033.MTA</code> vào <code>C:\Labs\LocaleMetaData\</code> (đổi lại đúng tên nếu bị thêm tiền tố khi tải).</li>
+        <li><code>eventvwr.msc</code> → <b>Action → Open Saved Log…</b> → chọn file → OK.</li>
+        <li>Đọc event ở tab <b>General</b> (dạng chữ) hoặc <b>Details → Friendly View / XML View</b> (từng field).</li>
+      </ol>
+      <div class="box tip">File .MTA là "cuốn từ điển" chứa tên các loại event Sysmon ("Process Create", "File created", "Registry value set"…). Thiếu nó trên máy không cài Sysmon thì tab General báo "description cannot be found" và <b>Find</b> không tìm được trong phần mô tả.</div>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B1</span>Tổng quan</h3>
+      <ul>
+        <li>Bấm cột <b>Date and Time</b> để sắp theo thời gian, cột <b>Event ID</b> / <b>Task Category</b> để gom theo loại.</li>
+        <li>Cột thời gian theo giờ máy bạn (UTC+7 → 21/05/2025 02:34), còn field <code>UtcTime</code> là giờ UTC (2025-05-20 19:34).</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B2</span>File USB nào được user chạy? <span class="pill">ID 1</span></h3>
+      <ol>
+        <li><b>Filter Current Log…</b> → Event IDs: <code>1</code> → OK (còn 16 event).</li>
+        <li>XPath không lọc được "không bắt đầu bằng C:\", nên dùng <b>Find…</b> (khung Actions) → gõ <code>Image: E:\</code> → Find Next. Nếu chưa biết ổ nào, thử lần lượt <code>Image: D:\</code>, <code>E:\</code>, <code>F:\</code>…</li>
+        <li>Cách khác: đọc lướt cột thời gian, chọn từng event và nhìn dòng <code>Image:</code>. Hầu hết là <code>C:\Program Files (x86)\Google\…</code>, chỉ một event có <code>Image: E:\Open Sandisk 4GB USB.exe</code> (19:34:06).</li>
+        <li>Trong event đó đọc: <code>ProcessId: 1108</code>, <code>CurrentDirectory: E:\</code>, <code>ParentImage: C:\Windows\explorer.exe</code>. <b>Copy <code>ProcessGuid</code></b> = <code>{c5d2b969-d92e-682c-9205-000000001801}</code>.</li>
+      </ol>
+      <p class="muted">Gợi ý thêm: Find <code>F:\</code> sẽ ra Record 4916, chrome mở <code>F:\tryhackme-report-2025.pdf</code>. Ổ F: đã có mặt trên máy từ trước khi malware chạy.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B3</span>File malware thả xuống đĩa <span class="pill">ID 11</span></h3>
+      <ol>
+        <li>Filter Current Log → Event IDs <code>11</code> → tab <b>XML</b> → tick <b>Edit query manually</b>.</li>
+        <li>Giữ nguyên các dòng <code>Path="file://…"</code> Event Viewer đã sinh, chỉ thay phần trong <code>&lt;Select&gt;</code>:</li>
+      </ol>
+<pre><code>&lt;QueryList&gt;
+  &lt;Query Id="0" Path="file://C:\Labs\USB-Sysmon.evtx"&gt;
+    &lt;Select Path="file://C:\Labs\USB-Sysmon.evtx"&gt;
+      *[System[(EventID=11)]]
+      and
+      *[EventData[Data[@Name='ProcessGuid']='{c5d2b969-d92e-682c-9205-000000001801}']]
+    &lt;/Select&gt;
+  &lt;/Query&gt;
+&lt;/QueryList&gt;</code></pre>
+      <p>Còn 2 event. Event lúc 19:34:06.755: <code>TargetFilename: C:\Users\Public\Documents\winupdate.exe</code> → <b>đáp án câu 2</b>.</p>
+      <p><b>Persistence:</b> đổi <code>EventID=11</code> thành <code>EventID=13</code> → thấy <code>TargetObject: …\CurrentVersion\Run\WinUpdate</code>, <code>Details: C:\Users\Public\Documents\winupdate.exe</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B4</span>Malware lây sang USB nào? <span class="pill">ID 11</span></h3>
+      <p>Vẫn dùng filter ở B3 (EventID 11 + GUID malware). Event còn lại (19:34:06.763) có <code>TargetFilename: F:\Open Data Traveler 32 GB USB.exe</code> → malware chép chính nó sang <b>ổ F:</b>.</p>
+      <p class="muted">Nếu chỉ filter <code>11</code> mà không có GUID, bạn sẽ thấy thêm event thứ 3: explorer.exe tạo <code>Downloads\meeting-recordings.zip</code>. Đó là của Explorer, không phải của malware, và diễn ra trước khi malware chạy → loại.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B5</span>Xem toàn bộ hành vi malware</h3>
+      <p>Xoá điều kiện EventID, chỉ để lại điều kiện GUID:</p>
+<pre><code>*[EventData[Data[@Name='ProcessGuid']='{c5d2b969-d92e-682c-9205-000000001801}']]</code></pre>
+      <p>Kết quả 4 event, xảy ra trong vòng 0,25 giây: ID 1 (chạy) → ID 11 (winupdate.exe) → ID 13 (Run key) → ID 11 (chép sang F:). Tốc độ này cho thấy đây là hành vi tự động của chương trình, không phải người thao tác.</p>
+      <p><b>Đi ngược lên cha:</b> copy <code>ParentProcessGuid</code> của event ID 1 → <b>Clear Filter</b> → <b>Find…</b> dán GUID → Find Next để thấy các event khác của explorer.exe (PID 2788).</p>
+    </div>
+
+    <div class="box tip"><b>Nhắc lại giới hạn XPath:</b> chỉ so khớp <b>chính xác</b>, không có wildcard/contains. Tìm theo một phần chuỗi (như "E:\", "Run\") thì dùng <b>Find…</b>, hoặc chuyển sang PowerShell.</div>
+  </div>
+</section>
+
+<section id="parent">
+  <h2>👪 Quan hệ cha – con trong bài này</h2>
+  <div class="two">
+    <div>
+      <h3>Quy tắc nối (giống bài Phishing)</h3>
+      <table>
+        <tr><th>Muốn biết</th><th>So field</th><th>với field</th></tr>
+        <tr><td>Cha của X</td><td><code>ParentProcessGuid</code> của X</td><td><code>ProcessGuid</code></td></tr>
+        <tr><td>Con của X</td><td><code>ProcessGuid</code> của X</td><td><code>ParentProcessGuid</code> ở ID 1</td></tr>
+        <tr><td>X tạo file gì</td><td><code>ProcessGuid</code> của X</td><td><code>ProcessGuid</code> ở ID 11</td></tr>
+        <tr><td>X sửa registry gì</td><td><code>ProcessGuid</code> của X</td><td><code>ProcessGuid</code> ở ID 12/13</td></tr>
+      </table>
+      <div class="box warn">Event ID 13 lúc 19:34:08 (Compatibility Assistant ghi nhận <code>E:\Open Sandisk 4GB USB.exe</code>) có tên malware trong <code>TargetObject</code>, nhưng <b>không phải do malware làm</b>: <code>Image</code> là svchost.exe (PID 2608), GUID khác. Đây là Windows tự ghi lại "có chương trình mới vừa chạy". Lọc theo GUID sẽ tự động loại được event này.</div>
+    </div>
+    <div>
+      <h3>Cây process</h3>
+<div class="tree"><span class="g">(chạy trước khi ghi log)</span>
+explorer.exe  PID 2788
+<span class="g">  GUID {c5d2b969-2e42-682b-4a02-…}</span>
+ ├─ chrome.exe                       PID 6588
+ └─ <span class="m">E:\Open Sandisk 4GB USB.exe     PID 1108</span>
+<span class="g">      GUID {c5d2b969-d92e-682c-9205-…}</span>
+      ├─ ID 11 → <span class="m">C:\Users\Public\Documents\winupdate.exe</span>
+      ├─ ID 13 → HKU\…\Run\WinUpdate
+      └─ ID 11 → <span class="m">F:\Open Data Traveler 32 GB USB.exe</span>
+
+svchost (DcomLaunch) PID 756
+ └─ OpenWith.exe                     PID 3116
+     └─ chrome.exe F:\tryhackme-report-2025.pdf
+                                     PID 6400 <span class="g">(*)</span>
+
+services.exe PID 612
+ └─ updater.exe / elevation_service … <span class="g">(nhiễu)</span>
+
+<span class="g">(*) PID 6400 về sau bị updater.exe dùng lại</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="timeline">
+  <h2>⏱️ Timeline (UTC, 2025-05-20)</h2>
+  <div class="tl">
+    <div class="it"><div class="t">19:31:02 · ID 1 · Rec 4901</div>User mở Chrome (PID 6588) từ explorer. Sau đó là các DNS <code>wpad</code>, <code>internal.tryhackme.thm</code> (nhiễu).</div>
+    <div class="it"><div class="t">19:31:52–56 · ID 1, 13 · Rec 4914–4916</div>User mở <code>F:\tryhackme-report-2025.pdf</code> bằng "Open with" → Chrome (PID 6400). <b>USB F: đang được cắm.</b></div>
+    <div class="it"><div class="t">19:33:22 · ID 11 · Rec 4921</div>Explorer tạo <code>Downloads\meeting-recordings.zip</code> (<code>CreationUtcTime</code> 19:30:06 → file được chép từ nơi khác vào). Không liên quan tới malware.</div>
+    <div class="it red"><div class="t">19:34:06.529 · ID 1 · Rec 4928</div>User double-click <b>E:\Open Sandisk 4GB USB.exe</b> → PID 1108, Integrity Level <b>High</b> (chạy với quyền admin).</div>
+    <div class="it red"><div class="t">19:34:06.755 · ID 11 · Rec 4929</div>Thả <b>C:\Users\Public\Documents\winupdate.exe</b>.</div>
+    <div class="it red"><div class="t">19:34:06.761 · ID 13 · Rec 4930</div>Persistence: <code>HKCU\…\Run\WinUpdate</code> → winupdate.exe.</div>
+    <div class="it red"><div class="t">19:34:06.763 · ID 11 · Rec 4931</div>Lây lan: chép sang <b>F:\Open Data Traveler 32 GB USB.exe</b>.</div>
+    <div class="it"><div class="t">19:34:08 · ID 13 · Rec 4932</div>Compatibility Assistant (svchost) ghi nhận E:\Open Sandisk 4GB USB.exe đã chạy.</div>
+    <div class="it"><div class="t">19:34:22 → 19:35:11 · Rec 4933–4939</div>EdgeUpdate, dllhost, DsmSvc… (nhiễu). Log kết thúc.</div>
+  </div>
+</section>
+
+<section id="pitfalls">
+  <h2>⚠️ Bẫy thường gặp</h2>
+  <table>
+    <tr><th>Hiện tượng</th><th>Giải thích</th></tr>
+    <tr><td><b>PID 6400 xuất hiện 2 lần</b> với 2 chương trình khác nhau</td><td>19:31:56 là chrome.exe mở file PDF; 19:33:39 là updater.exe. Chrome tắt xong, Windows cấp lại số 6400 cho process mới. Đây là ví dụ thật cho lý do <b>phải nối bằng ProcessGuid</b>: hai GUID khác nhau (<code>…d8ac…7c05</code> và <code>…d913…8c05</code>).</td></tr>
+    <tr><td>Chrome mở <code>F:\tryhackme-report-2025.pdf</code></td><td>Không phải file "được chạy" theo nghĩa thực thi. Nó chỉ giúp xác nhận F: là một USB đang cắm.</td></tr>
+    <tr><td><code>meeting-recordings.zip</code> trong Downloads</td><td>Do explorer tạo, trước khi malware chạy, không có liên kết GUID với malware → bỏ qua.</td></tr>
+    <tr><td>Event 13 có chữ "Open Sandisk 4GB USB.exe"</td><td>Do svchost (Compatibility Assistant) ghi, không phải malware ghi. Luôn đọc field <code>Image</code> để biết <b>ai</b> làm, đừng chỉ nhìn chữ xuất hiện trong event.</td></tr>
+    <tr><td>Rất nhiều updater.exe / DNS wpad</td><td>Google Updater chạy theo lịch, Chrome tự dò proxy (WPAD). Hoạt động bình thường.</td></tr>
+  </table>
+
+  <div class="box ok"><b>Quy trình tổng quát cho bài USB / removable media:</b><br>
+  ① ID 1: lọc <code>Image</code> không nằm ở <code>C:\</code>, có cha là explorer.exe → file user chạy từ USB. Ghi lại PID + GUID.<br>
+  ② ID 11 theo GUID đó: file trên <code>C:\</code> = payload thả xuống; file trên ổ khác = lây lan sang USB.<br>
+  ③ ID 12/13 theo GUID: persistence (Run, RunOnce, Services, Scheduled Tasks…).<br>
+  ④ ID 1 có <code>ParentProcessGuid</code> = GUID malware: payload có được chạy tiếp không (ở log này: không).<br>
+  ⑤ ID 3/22 theo GUID: có gọi mạng không (ở log này: không).</div>
+</section>
+
+</main>
+<footer>Phân tích từ USB-Sysmon.evtx — 39 event, Record ID 4901–4939.</footer>
+
+<script>
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('active')});
+      document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});
+      b.classList.add('active');
+      document.getElementById(b.dataset.tab).classList.add('active');
+    });
+  });
+  document.querySelectorAll('pre').forEach(function(pre){
+    var btn=document.createElement('button');
+    btn.className='copy'; btn.textContent='Copy';
+    btn.addEventListener('click',function(){
+      var txt=pre.querySelector('code').innerText;
+      try{
+        navigator.clipboard.writeText(txt).then(function(){btn.textContent='Đã copy ✓';setTimeout(function(){btn.textContent='Copy'},1500)});
+      }catch(e){
+        var r=document.createRange(); r.selectNodeContents(pre.querySelector('code'));
+        var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent='Ctrl+C';
+      }
+    });
+    pre.appendChild(btn);
+  });
+</script>
+</body>
+</html>

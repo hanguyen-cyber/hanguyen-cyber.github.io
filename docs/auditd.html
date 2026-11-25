@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>auditd — Linux Audit Daemon · Definition & Guide</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --border:#30363d; --text:#e6edf3; --h1:#ffffff; --muted:#8b949e;
+    --accent:#a371f7; --accent-ink:#0d1117; --accent-bg:rgba(163,113,247,.08); --accent-bd:rgba(163,113,247,.30);
+    --code-bg:#1c2128;
+    --green:#3fb950; --amber:#d29922; --blue:#58a6ff;
+    --pill-ok-bg:rgba(63,185,80,.15); --pill-ok-bd:rgba(63,185,80,.40);
+    --pill-no-bg:rgba(139,148,158,.15); --pill-no-bd:rgba(139,148,158,.40);
+    --pre-bg:#010409; --pre-bd:#30363d;
+    --s-cmd:#3fb950; --s-flag:#d29922; --s-tool:#58a6ff; --s-cmt:#8b949e;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  html[data-theme="light"]{
+    --bg:#f5f2ec; --panel:#fbf9f5; --border:#d6d0c6; --text:#1c1b19; --h1:#1c1b19; --muted:#5c5852;
+    --accent:oklch(0.55 0.15 35); --accent-ink:#fbf9f5; --accent-bg:rgba(176,84,43,.09); --accent-bd:rgba(176,84,43,.30);
+    --code-bg:#ebe6dd;
+    --green:#1a7f37; --amber:#9a6700; --blue:#0a66c2;
+    --pill-ok-bg:rgba(26,127,55,.12); --pill-ok-bd:rgba(26,127,55,.35);
+    --pill-no-bg:rgba(92,88,82,.12); --pill-no-bd:rgba(92,88,82,.30);
+  }
+  html[lang="en"] .vi, html[lang="vi"] .en{display:none !important;}
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.65;
+    transition:background .2s,color .2s;}
+  .wrap{max-width:860px;margin:0 auto;padding:64px 22px 80px;}
+  .lang,.theme{position:fixed;top:16px;z-index:50;display:flex;border:1px solid var(--border);
+    border-radius:7px;overflow:hidden;background:var(--panel);box-shadow:0 2px 12px rgba(0,0,0,.25);}
+  .lang{left:16px;} .theme{right:16px;}
+  .lang button,.theme button{font-family:var(--mono);font-size:12px;letter-spacing:.06em;border:0;
+    background:transparent;color:var(--text);padding:6px 12px;cursor:pointer;transition:.15s;line-height:1;}
+  .lang button:hover,.theme button:hover{color:var(--accent);}
+  .lang button[aria-pressed="true"],.theme button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);}
+  .lang button[aria-pressed="true"]:hover,.theme button[aria-pressed="true"]:hover{color:var(--accent-ink);}
+  .theme button{font-size:13px;}
+  header{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:34px;}
+  .tag{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--accent);
+    border:1px solid var(--accent);border-radius:5px;padding:2px 9px;margin-bottom:14px;letter-spacing:.5px;}
+  h1{font-family:var(--mono);font-size:30px;margin:0 0 8px;color:var(--h1);}
+  h1 .ext{color:var(--muted);font-weight:400;font-size:20px;}
+  .sub{color:var(--muted);font-size:15px;margin:0;}
+  h2{font-size:20px;margin:40px 0 14px;padding-left:12px;border-left:4px solid var(--accent);}
+  h3{font-size:16px;margin:26px 0 10px;color:var(--accent);}
+  p{margin:10px 0;}
+  .analogy{background:var(--accent-bg);border:1px solid var(--accent-bd);
+    border-radius:10px;padding:14px 18px;margin:16px 0;font-size:14.5px;}
+  .analogy b{color:var(--accent);}
+  code{font-family:var(--mono);background:var(--code-bg);padding:2px 6px;border-radius:4px;font-size:13.5px;color:var(--text);}
+  pre{background:var(--pre-bg);border:1px solid var(--pre-bd);border-radius:10px;padding:16px 18px;
+    overflow-x:auto;font-family:var(--mono);font-size:13.5px;margin:14px 0;color:#e6edf3;}
+  pre .c{color:var(--s-cmd);} pre .f{color:var(--s-flag);} pre .u{color:var(--s-tool);} pre .cm{color:var(--s-cmt);}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px;}
+  th,td{border:1px solid var(--border);padding:9px 12px;text-align:left;vertical-align:top;}
+  th{background:var(--panel);color:var(--accent);font-weight:600;}
+  td code{white-space:nowrap;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin:16px 0;}
+  .card.blue{border-left:4px solid var(--blue);}
+  .card h3{margin-top:0;} .card.blue h3{color:var(--blue);}
+  ul,ol{margin:10px 0;padding-left:22px;} li{margin:6px 0;}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:4px;margin-right:6px;}
+  .pill.ok{background:var(--pill-ok-bg);color:var(--green);border:1px solid var(--pill-ok-bd);}
+  .pill.no{background:var(--pill-no-bg);color:var(--muted);border:1px solid var(--pill-no-bd);}
+  .nav{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
+  .nav a{font-family:var(--mono);font-size:12px;color:var(--muted);text-decoration:none;
+    border:1px solid var(--border);border-radius:20px;padding:5px 14px;transition:.15s;}
+  .nav a:hover{color:var(--accent);border-color:var(--accent);}
+  .flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0;font-family:var(--mono);font-size:12.5px;}
+  .flow span.box{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 10px;}
+  .flow span.box.hl{border-color:var(--accent);background:var(--accent-bg);color:var(--accent);}
+  .flow span.arr{color:var(--muted);}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px;}
+  footer a{color:var(--muted);}
+  .warn{color:var(--amber);font-weight:600;}
+</style>
+<script>
+  (function(){try{var d=document.documentElement;
+    d.lang=localStorage.getItem('ref-lang')||'en';
+    d.setAttribute('data-theme',localStorage.getItem('ref-theme')||'dark');
+  }catch(e){var d=document.documentElement;d.lang='en';d.setAttribute('data-theme','dark');}})();
+</script>
+</head>
+<body>
+
+<div class="lang" role="group" aria-label="Language">
+  <button data-lang="en" aria-pressed="true">EN</button><button data-lang="vi" aria-pressed="false">VI</button>
+</div>
+<div class="theme" role="group" aria-label="Theme">
+  <button data-theme="light" aria-pressed="false" title="Light mode">☀</button><button data-theme="dark" aria-pressed="true" title="Dark mode">☾</button>
+</div>
+
+<div class="wrap">
+<header>
+  <span class="tag">LINUX · AUDIT DAEMON</span>
+  <h1>auditd <span class="ext">(Linux Audit Daemon)</span></h1>
+  <p class="sub en">Kernel-level runtime auditing for SOC investigations</p>
+  <p class="sub vi">Ghi nhật ký kiểm toán từ kernel phục vụ điều tra SOC</p>
+</header>
+
+<div class="nav">
+  <a href="#dn"><span class="en">Definition</span><span class="vi">Định nghĩa</span></a>
+  <a href="#cd"><span class="en">Install</span><span class="vi">Cài đặt</span></a>
+  <a href="#rule"><span class="en">Reading rules</span><span class="vi">Đọc rule</span></a>
+  <a href="#mau"><span class="en">Sample ruleset</span><span class="vi">Bộ rule mẫu</span></a>
+  <a href="#log"><span class="en">Reading events</span><span class="vi">Đọc sự kiện</span></a>
+  <a href="#tim"><span class="en">ausearch · aureport</span><span class="vi">ausearch · aureport</span></a>
+  <a href="#dt"><span class="en">Investigation</span><span class="vi">Điều tra</span></a>
+  <a href="#blue"><span class="en">Blue-team view</span><span class="vi">Góc blue team</span></a>
+</div>
+
+<!-- 1 -->
+<h2 id="dn"><span class="en">1. Definition</span><span class="vi">1. Định nghĩa</span></h2>
+<p class="en"><code>auditd</code> is Linux's built-in auditing service. The <b>kernel</b> watches system calls that match the rules you set,
+and auditd writes the results to <code>/var/log/audit/audit.log</code>.</p>
+<p class="vi"><code>auditd</code> là dịch vụ kiểm toán có sẵn của Linux. <b>Kernel</b> theo dõi các system call khớp với rule bạn đặt,
+rồi auditd ghi kết quả vào <code>/var/log/audit/audit.log</code>.</p>
+<div class="analogy en">
+  <b>Analogy:</b> syslog is a diary each employee writes themselves — anyone who doesn't want to write simply doesn't.
+  <b>auditd</b> is a camera at the door, run by the building (the kernel): programs can't opt out of being filmed.
+</div>
+<div class="analogy vi">
+  <b>Ví von:</b> syslog giống sổ nhật ký mỗi nhân viên tự viết — ai không muốn viết thì thôi.
+  <b>auditd</b> giống camera gắn ở cửa do tòa nhà (kernel) quản lý: chương trình không tự né được.
+</div>
+
+<div class="flow">
+  <span class="box">Program · wget, bash</span><span class="arr">→ syscall →</span>
+  <span class="box hl">Kernel · match rule</span><span class="arr">→</span>
+  <span class="box">auditd</span><span class="arr">→</span>
+  <span class="box">audit.log</span><span class="arr">→</span>
+  <span class="box">ausearch / aureport</span><span class="arr">→</span>
+  <span class="box">SOC / SIEM</span>
+</div>
+
+<table class="en">
+  <tr><th></th><th>Syslog</th><th>auditd</th></tr>
+  <tr><td>Who writes</td><td>Each application</td><td>The kernel; auditd stores it</td></tr>
+  <tr><td>What is logged</td><td>Whatever the app wants to report</td><td>Whatever your rules watch</td></tr>
+  <tr><td>Log file</td><td><code>/var/log/syslog</code>, <code>auth.log</code></td><td><code>/var/log/audit/audit.log</code></td></tr>
+  <tr><td>Easy to evade?</td><td>Yes — just don't log</td><td>Hard — watched from the kernel</td></tr>
+  <tr><td>Easy to read?</td><td>Yes</td><td>No — use <code>ausearch</code></td></tr>
+</table>
+<table class="vi">
+  <tr><th></th><th>Syslog</th><th>auditd</th></tr>
+  <tr><td>Ai ghi</td><td>Từng ứng dụng tự ghi</td><td>Kernel ghi, auditd lưu</td></tr>
+  <tr><td>Ghi gì</td><td>Thứ ứng dụng muốn báo</td><td>Thứ rule của bạn theo dõi</td></tr>
+  <tr><td>File log</td><td><code>/var/log/syslog</code>, <code>auth.log</code></td><td><code>/var/log/audit/audit.log</code></td></tr>
+  <tr><td>Né được không</td><td>Dễ — chỉ cần không ghi</td><td>Khó — theo dõi từ kernel</td></tr>
+  <tr><td>Dễ đọc không</td><td>Dễ</td><td>Khó — cần <code>ausearch</code></td></tr>
+</table>
+
+<table class="en">
+  <tr><th>Tool</th><th>What it does</th><th>Analogy</th></tr>
+  <tr><td><code>auditd</code></td><td>Receives events from the kernel, writes them to disk</td><td>The recorder</td></tr>
+  <tr><td><code>auditctl</code></td><td>Shows status, loads or removes rules at runtime</td><td>Pointing the cameras</td></tr>
+  <tr><td><code>augenrules</code></td><td>Merges <code>/etc/audit/rules.d/</code> into the official ruleset</td><td>Printing the guard's instruction sheet</td></tr>
+  <tr><td><code>ausearch</code></td><td>Searches events by key, user, file, program, time</td><td>Scrubbing the footage</td></tr>
+  <tr><td><code>aureport</code></td><td>Summary reports</td><td>The weekly security report</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Công cụ</th><th>Việc nó làm</th><th>Ví von</th></tr>
+  <tr><td><code>auditd</code></td><td>Nhận sự kiện từ kernel, ghi xuống đĩa</td><td>Đầu ghi hình</td></tr>
+  <tr><td><code>auditctl</code></td><td>Xem trạng thái, nạp hoặc xóa rule khi máy đang chạy</td><td>Chỉnh hướng camera</td></tr>
+  <tr><td><code>augenrules</code></td><td>Gộp <code>/etc/audit/rules.d/</code> thành bộ rule chính thức</td><td>In tờ dặn dò cho bảo vệ</td></tr>
+  <tr><td><code>ausearch</code></td><td>Tìm sự kiện theo key, user, file, chương trình, thời gian</td><td>Tua lại băng hình</td></tr>
+  <tr><td><code>aureport</code></td><td>Báo cáo thống kê</td><td>Báo cáo an ninh hằng tuần</td></tr>
+</table>
+
+<!-- 2 -->
+<h2 id="cd"><span class="en">2. Install &amp; manage</span><span class="vi">2. Cài đặt &amp; quản lý</span></h2>
+<pre><span class="cm"># Ubuntu/Debian</span>
+<span class="u">sudo apt install</span> auditd audispd-plugins
+<span class="cm"># RHEL/Rocky/Fedora (usually preinstalled)</span>
+<span class="u">sudo dnf install</span> audit
+
+<span class="u">sudo systemctl</span> <span class="c">enable --now</span> auditd
+<span class="u">sudo auditctl</span> <span class="f">-s</span>     <span class="cm"># status: enabled=1 means logging</span>
+<span class="u">sudo auditctl</span> <span class="f">-l</span>     <span class="cm"># list loaded rules</span></pre>
+<p class="en"><span class="warn">Note:</span> on RHEL, <code>systemctl restart auditd</code> is refused by design — use <code>sudo service auditd restart</code>.</p>
+<p class="vi"><span class="warn">Lưu ý:</span> trên RHEL, <code>systemctl restart auditd</code> bị từ chối có chủ đích — dùng <code>sudo service auditd restart</code>.</p>
+
+<table class="en">
+  <tr><th>File / folder</th><th>Used for</th></tr>
+  <tr><td><code>/etc/audit/auditd.conf</code></td><td>Daemon config: log size, rotation, disk-full behaviour</td></tr>
+  <tr><td><code>/etc/audit/rules.d/*.rules</code></td><td>Where you write rules — survives reboot</td></tr>
+  <tr><td><code>/etc/audit/audit.rules</code></td><td>Generated by <code>augenrules</code> — don't edit by hand</td></tr>
+  <tr><td><code>/var/log/audit/audit.log</code></td><td>Event log — root-only</td></tr>
+</table>
+<table class="vi">
+  <tr><th>File / thư mục</th><th>Dùng để</th></tr>
+  <tr><td><code>/etc/audit/auditd.conf</code></td><td>Cấu hình daemon: kích thước log, xoay vòng, xử lý khi đầy đĩa</td></tr>
+  <tr><td><code>/etc/audit/rules.d/*.rules</code></td><td>Nơi viết rule — giữ lại sau khi khởi động lại</td></tr>
+  <tr><td><code>/etc/audit/audit.rules</code></td><td>Do <code>augenrules</code> tự sinh — không sửa tay</td></tr>
+  <tr><td><code>/var/log/audit/audit.log</code></td><td>Log sự kiện — chỉ root đọc được</td></tr>
+</table>
+<p class="en">Rules added with <code>auditctl</code> on the command line vanish at reboot. Write them in <code>rules.d</code> to keep them.</p>
+<p class="vi">Rule thêm bằng <code>auditctl</code> trên dòng lệnh sẽ mất khi khởi động lại. Muốn giữ thì ghi vào <code>rules.d</code>.</p>
+
+<!-- 3 -->
+<h2 id="rule"><span class="en">3. Reading a rule</span><span class="vi">3. Cách đọc một rule</span></h2>
+<div class="analogy en">
+  <b>Analogy:</b> every rule is an instruction to a guard: "<b>always record</b> → whenever someone <b>does X</b> → but <b>only if Y</b> → and <b>label it Z</b>."
+</div>
+<div class="analogy vi">
+  <b>Ví von:</b> mỗi rule là một câu dặn bảo vệ: "<b>luôn ghi lại</b> → khi ai <b>làm việc X</b> → nhưng <b>chỉ khi thỏa Y</b> → và <b>dán nhãn Z</b>."
+</div>
+
+<h3 class="en">Type 1 — watch a file or folder</h3>
+<h3 class="vi">Kiểu 1 — theo dõi file hoặc thư mục</h3>
+<pre><span class="c">-w</span> /etc/passwd <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">identity</span></pre>
+<p class="en">Watch (<code>-w</code>) <code>/etc/passwd</code>, record writes and attribute changes (<code>-p wa</code>), label it <code>identity</code> (<code>-k</code>).
+Permissions: <code>r</code> read, <code>w</code> write, <code>x</code> execute, <code>a</code> attribute change. A watch on a folder covers every file inside.</p>
+<p class="vi">Theo dõi (<code>-w</code>) <code>/etc/passwd</code>, ghi lại khi có ghi hoặc đổi thuộc tính (<code>-p wa</code>), dán nhãn <code>identity</code> (<code>-k</code>).
+Quyền: <code>r</code> đọc, <code>w</code> ghi, <code>x</code> thực thi, <code>a</code> đổi thuộc tính. Đặt lên thư mục thì mọi file bên trong đều được theo dõi.</p>
+
+<h3 class="en">Type 2 — watch a system call</h3>
+<h3 class="vi">Kiểu 2 — theo dõi system call</h3>
+<pre><span class="c">-a</span> always,exit <span class="c">-F</span> arch=b64 <span class="c">-S</span> <span class="f">execve</span> <span class="c">-F</span> exe=/usr/bin/wget <span class="c">-k</span> <span class="u">proc_wget</span></pre>
+<table class="en">
+  <tr><th>Part</th><th>Example</th><th>Meaning</th></tr>
+  <tr><td>Action, list</td><td><code>-a always,exit</code></td><td>Always record, checked when the syscall exits. <code>never</code> = drop (noise filter)</td></tr>
+  <tr><td>Architecture</td><td><code>-F arch=b64</code></td><td>64-bit programs. Add a <code>b32</code> line so 32-bit ones aren't missed</td></tr>
+  <tr><td>System call</td><td><code>-S execve</code></td><td>The "verb" to watch</td></tr>
+  <tr><td>Filter</td><td><code>-F exe=/usr/bin/wget</code></td><td>Only when true; several <code>-F</code> = all must match</td></tr>
+  <tr><td>Key</td><td><code>-k proc_wget</code></td><td>Label for <code>ausearch -k</code>. <code>-F key=</code> works too</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Phần</th><th>Ví dụ</th><th>Nghĩa</th></tr>
+  <tr><td>Hành động, danh sách</td><td><code>-a always,exit</code></td><td>Luôn ghi, xét lúc system call kết thúc. <code>never</code> = không ghi (lọc nhiễu)</td></tr>
+  <tr><td>Kiến trúc</td><td><code>-F arch=b64</code></td><td>Chương trình 64-bit. Thêm dòng <code>b32</code> để không sót bản 32-bit</td></tr>
+  <tr><td>System call</td><td><code>-S execve</code></td><td>"Động từ" cần theo dõi</td></tr>
+  <tr><td>Bộ lọc</td><td><code>-F exe=/usr/bin/wget</code></td><td>Chỉ ghi khi đúng; nhiều <code>-F</code> = tất cả phải đúng</td></tr>
+  <tr><td>Nhãn</td><td><code>-k proc_wget</code></td><td>Tên để tìm bằng <code>ausearch -k</code>. Viết <code>-F key=</code> cũng được</td></tr>
+</table>
+
+<h3 class="en">Common system calls</h3>
+<h3 class="vi">System call hay dùng</h3>
+<table class="en">
+  <tr><th>Syscall</th><th>"Verb"</th><th>Detects</th></tr>
+  <tr><td><code>execve</code></td><td>run a program</td><td>Who ran what</td></tr>
+  <tr><td><code>openat</code></td><td>open a file</td><td>Reading or editing sensitive files</td></tr>
+  <tr><td><code>connect</code></td><td>connect to the network</td><td>Reverse shells, outbound calls</td></tr>
+  <tr><td><code>unlink</code>, <code>unlinkat</code>, <code>rename</code></td><td>delete, rename</td><td>Covering tracks</td></tr>
+  <tr><td><code>chmod</code>, <code>fchmodat</code>, <code>chown</code></td><td>change permissions</td><td>Making malware executable</td></tr>
+  <tr><td><code>init_module</code>, <code>finit_module</code></td><td>load a kernel module</td><td>Rootkits</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Syscall</th><th>"Động từ"</th><th>Phát hiện</th></tr>
+  <tr><td><code>execve</code></td><td>chạy chương trình</td><td>Ai chạy lệnh gì</td></tr>
+  <tr><td><code>openat</code></td><td>mở file</td><td>Đọc hoặc sửa file nhạy cảm</td></tr>
+  <tr><td><code>connect</code></td><td>kết nối mạng</td><td>Reverse shell, kết nối ra ngoài</td></tr>
+  <tr><td><code>unlink</code>, <code>unlinkat</code>, <code>rename</code></td><td>xóa, đổi tên</td><td>Xóa dấu vết</td></tr>
+  <tr><td><code>chmod</code>, <code>fchmodat</code>, <code>chown</code></td><td>đổi quyền</td><td>Cấp quyền thực thi cho mã độc</td></tr>
+  <tr><td><code>init_module</code>, <code>finit_module</code></td><td>nạp module kernel</td><td>Rootkit</td></tr>
+</table>
+
+<h3 class="en">Common filters (-F)</h3>
+<h3 class="vi">Bộ lọc hay dùng (-F)</h3>
+<table class="en">
+  <tr><th>Filter</th><th>Meaning</th></tr>
+  <tr><td><code>exe=</code></td><td>Real path of the program (not a symlink)</td></tr>
+  <tr><td><code>path=</code> / <code>dir=</code></td><td>One file / a whole folder</td></tr>
+  <tr><td><code>perm=</code></td><td>Access type <code>r w x a</code></td></tr>
+  <tr><td><code>auid&gt;=1000</code></td><td>Real logged-in users only (skip system accounts)</td></tr>
+  <tr><td><code>auid!=unset</code></td><td>Skip processes with no login session. Older: <code>auid!=4294967295</code></td></tr>
+  <tr><td><code>euid=0</code></td><td>Running with root privileges</td></tr>
+  <tr><td><code>success=0</code></td><td>Failed attempts only (e.g. permission denied)</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Bộ lọc</th><th>Nghĩa</th></tr>
+  <tr><td><code>exe=</code></td><td>Đường dẫn thật của chương trình (không phải symlink)</td></tr>
+  <tr><td><code>path=</code> / <code>dir=</code></td><td>Một file / cả thư mục</td></tr>
+  <tr><td><code>perm=</code></td><td>Kiểu truy cập <code>r w x a</code></td></tr>
+  <tr><td><code>auid&gt;=1000</code></td><td>Chỉ user thật đã đăng nhập (bỏ tài khoản hệ thống)</td></tr>
+  <tr><td><code>auid!=unset</code></td><td>Bỏ tiến trình không gắn phiên đăng nhập. Bản cũ: <code>auid!=4294967295</code></td></tr>
+  <tr><td><code>euid=0</code></td><td>Chạy với quyền root</td></tr>
+  <tr><td><code>success=0</code></td><td>Chỉ lần thất bại (vd. bị từ chối quyền)</td></tr>
+</table>
+
+<h3 class="en">Example: the TryHackMe room rules</h3>
+<h3 class="vi">Ví dụ: rule trong room TryHackMe</h3>
+<table class="en">
+  <tr><th>Rule</th><th>Reads as</th></tr>
+  <tr><td><code>-a always,exit -S execve -F exe=/usr/bin/wget -F key=proc_wget</code></td><td>Record every run of <code>wget</code></td></tr>
+  <tr><td><code>-a always,exit -S openat -F path=/secret.thm -F key=file_thmsecret</code></td><td>Record every open of <code>/secret.thm</code></td></tr>
+  <tr><td><code>-a always,exit -S openat -F dir=/etc/ssh -F perm=w -F key=file_sshconf</code></td><td>Record every write-open in <code>/etc/ssh</code></td></tr>
+  <tr><td><code>-a always,exit -S connect -F exe=/usr/bin/python3.12 -F key=net_python</code></td><td>Record every network connection by Python</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Rule</th><th>Đọc là</th></tr>
+  <tr><td><code>-a always,exit -S execve -F exe=/usr/bin/wget -F key=proc_wget</code></td><td>Ghi mỗi lần ai chạy <code>wget</code></td></tr>
+  <tr><td><code>-a always,exit -S openat -F path=/secret.thm -F key=file_thmsecret</code></td><td>Ghi mỗi lần ai mở <code>/secret.thm</code></td></tr>
+  <tr><td><code>-a always,exit -S openat -F dir=/etc/ssh -F perm=w -F key=file_sshconf</code></td><td>Ghi mỗi lần mở để ghi file trong <code>/etc/ssh</code></td></tr>
+  <tr><td><code>-a always,exit -S connect -F exe=/usr/bin/python3.12 -F key=net_python</code></td><td>Ghi mỗi lần Python mở kết nối mạng</td></tr>
+</table>
+
+<!-- 4 -->
+<h2 id="mau"><span class="en">4. Sample SOC ruleset</span><span class="vi">4. Bộ rule mẫu cho SOC</span></h2>
+<p class="en">Focus on high-risk behaviour instead of logging everything. Save as <code>/etc/audit/rules.d/50-soc.rules</code> and adjust to your machine.</p>
+<p class="vi">Tập trung vào hành vi rủi ro cao thay vì ghi mọi thứ. Lưu thành <code>/etc/audit/rules.d/50-soc.rules</code> rồi chỉnh theo máy của bạn.</p>
+<pre><span class="cm">## Clear old rules, raise buffer, warn on lost events</span>
+<span class="c">-D</span>
+<span class="c">-b</span> 8192
+<span class="c">-f</span> 1
+
+<span class="cm">## 1. Commands run by real users</span>
+<span class="c">-a</span> always,exit <span class="c">-F</span> arch=b64 <span class="c">-S</span> <span class="f">execve</span> <span class="c">-F</span> auid&gt;=1000 <span class="c">-F</span> auid!=unset <span class="c">-k</span> <span class="u">exec_user</span>
+<span class="c">-a</span> always,exit <span class="c">-F</span> arch=b32 <span class="c">-S</span> <span class="f">execve</span> <span class="c">-F</span> auid&gt;=1000 <span class="c">-F</span> auid!=unset <span class="c">-k</span> <span class="u">exec_user</span>
+
+<span class="cm">## 2. Accounts &amp; privileges</span>
+<span class="c">-w</span> /etc/passwd <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">identity</span>
+<span class="c">-w</span> /etc/shadow <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">identity</span>
+<span class="c">-w</span> /etc/group <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">identity</span>
+<span class="c">-w</span> /etc/sudoers <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">priv_esc</span>
+<span class="c">-w</span> /etc/sudoers.d/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">priv_esc</span>
+
+<span class="cm">## 3. SSH</span>
+<span class="c">-w</span> /etc/ssh/sshd_config <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">sshd_conf</span>
+<span class="c">-w</span> /root/.ssh/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">ssh_keys</span>
+
+<span class="cm">## 4. Persistence via cron &amp; systemd</span>
+<span class="c">-w</span> /etc/crontab <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">cron</span>
+<span class="c">-w</span> /etc/cron.d/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">cron</span>
+<span class="c">-w</span> /var/spool/cron/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">cron</span>
+<span class="c">-w</span> /etc/systemd/system/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">systemd_persist</span>
+
+<span class="cm">## 5. Download tools</span>
+<span class="c">-w</span> /usr/bin/wget <span class="c">-p</span> <span class="f">x</span> <span class="c">-k</span> <span class="u">download_tool</span>
+<span class="c">-w</span> /usr/bin/curl <span class="c">-p</span> <span class="f">x</span> <span class="c">-k</span> <span class="u">download_tool</span>
+
+<span class="cm">## 6. Python network connections (reverse shell)</span>
+<span class="c">-a</span> always,exit <span class="c">-F</span> arch=b64 <span class="c">-S</span> <span class="f">connect</span> <span class="c">-F</span> exe=/usr/bin/python3.12 <span class="c">-k</span> <span class="u">net_python</span>
+
+<span class="cm">## 7. Tampering with audit logs or config</span>
+<span class="c">-w</span> /var/log/audit/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">audit_tamper</span>
+<span class="c">-w</span> /etc/audit/ <span class="c">-p</span> <span class="f">wa</span> <span class="c">-k</span> <span class="u">audit_tamper</span>
+<span class="c">-w</span> /usr/sbin/auditctl <span class="c">-p</span> <span class="f">x</span> <span class="c">-k</span> <span class="u">audit_tamper</span>
+
+<span class="cm">## Lock config — uncomment once stable</span>
+<span class="cm"># -e 2</span></pre>
+<pre><span class="u">sudo augenrules</span> <span class="f">--load</span>   <span class="cm"># merge rules.d and load into the kernel</span>
+<span class="u">sudo auditctl</span> <span class="f">-l</span>         <span class="cm"># confirm rules are loaded</span>
+<span class="u">sudo auditctl</span> <span class="f">-s</span>         <span class="cm"># "lost" should stay at 0</span></pre>
+<ul>
+  <li class="en"><code>exe=</code> needs the real path. <code>/usr/bin/python3</code> is usually a symlink — check with <code>readlink -f /usr/bin/python3</code>.</li>
+  <li class="vi"><code>exe=</code> cần đường dẫn thật. <code>/usr/bin/python3</code> thường là symlink — kiểm tra bằng <code>readlink -f /usr/bin/python3</code>.</li>
+  <li class="en"><code>-e 2</code> locks all rules until reboot, even for root. Enable only once the ruleset is stable.</li>
+  <li class="vi"><code>-e 2</code> khóa mọi rule đến lần khởi động lại, kể cả với root. Chỉ bật khi bộ rule đã ổn định.</li>
+  <li class="en"><code>-f 1</code> only warns on lost events; <code>-f 2</code> causes a kernel panic — not for ordinary machines.</li>
+  <li class="vi"><code>-f 1</code> chỉ cảnh báo khi mất sự kiện; <code>-f 2</code> gây kernel panic — không dùng cho máy thường.</li>
+</ul>
+
+<!-- 5 -->
+<h2 id="log"><span class="en">5. Reading an event</span><span class="vi">5. Đọc một sự kiện</span></h2>
+<p class="en">One action produces several lines. Lines sharing the same <code>msg=audit(time:serial)</code> belong to one event — like pages of the same case file.</p>
+<p class="vi">Một hành động sinh ra nhiều dòng. Các dòng có cùng <code>msg=audit(thời_gian:số_thứ_tự)</code> thuộc cùng một sự kiện — như các trang của cùng một hồ sơ.</p>
+<h3 class="en">Raw log (hard to read)</h3>
+<h3 class="vi">Log thô (khó đọc)</h3>
+<pre><span class="c">type=SYSCALL</span> msg=audit(<span class="f">1755002899.093:2219</span>): arch=c000003e syscall=59 success=yes ppid=3752 pid=3888 auid=1000 uid=0 tty=pts1 comm="wget" exe="/usr/bin/wget" key="proc_wget"
+<span class="c">type=PROCTITLE</span> msg=audit(<span class="f">1755002899.093:2219</span>): proctitle=77676574...</pre>
+<h3 class="en">Same event via <code>ausearch -i</code></h3>
+<h3 class="vi">Cùng sự kiện qua <code>ausearch -i</code></h3>
+<pre><span class="c">type=PROCTITLE</span> msg=audit(<span class="f">08/12/25 12:48:19.093:2219</span>) : proctitle=wget https://files.tryhackme.thm/report.zip
+<span class="c">type=CWD</span> msg=audit(<span class="f">08/12/25 12:48:19.093:2219</span>) : cwd=/root
+<span class="c">type=EXECVE</span> msg=audit(<span class="f">08/12/25 12:48:19.093:2219</span>) : argc=2 a0=wget a1=https://files.tryhackme.thm/report.zip
+<span class="c">type=SYSCALL</span> msg=audit(<span class="f">08/12/25 12:48:19.093:2219</span>) : arch=x86_64 syscall=execve [...] ppid=3752 pid=3888 <span class="u">auid=ubuntu uid=root</span> tty=pts1 exe=/usr/bin/wget key=proc_wget</pre>
+
+<table class="en">
+  <tr><th>type</th><th>Tells you</th></tr>
+  <tr><td><code>SYSCALL</code></td><td>Which syscall, who called it, success or not, which key</td></tr>
+  <tr><td><code>EXECVE</code></td><td>Each command argument: <code>a0</code>, <code>a1</code>…</td></tr>
+  <tr><td><code>PROCTITLE</code></td><td>Full command line</td></tr>
+  <tr><td><code>CWD</code></td><td>Working directory</td></tr>
+  <tr><td><code>PATH</code></td><td>Which file was touched</td></tr>
+  <tr><td><code>USER_LOGIN</code>, <code>USER_AUTH</code></td><td>Login, authentication</td></tr>
+  <tr><td><code>USER_CMD</code></td><td>Command run via <code>sudo</code></td></tr>
+  <tr><td><code>CONFIG_CHANGE</code></td><td>Audit rules changed</td></tr>
+</table>
+<table class="vi">
+  <tr><th>type</th><th>Cho biết</th></tr>
+  <tr><td><code>SYSCALL</code></td><td>System call nào, ai gọi, thành công không, key nào</td></tr>
+  <tr><td><code>EXECVE</code></td><td>Từng tham số của lệnh: <code>a0</code>, <code>a1</code>…</td></tr>
+  <tr><td><code>PROCTITLE</code></td><td>Cả dòng lệnh đầy đủ</td></tr>
+  <tr><td><code>CWD</code></td><td>Thư mục đang đứng</td></tr>
+  <tr><td><code>PATH</code></td><td>File nào bị chạm tới</td></tr>
+  <tr><td><code>USER_LOGIN</code>, <code>USER_AUTH</code></td><td>Đăng nhập, xác thực</td></tr>
+  <tr><td><code>USER_CMD</code></td><td>Lệnh chạy qua <code>sudo</code></td></tr>
+  <tr><td><code>CONFIG_CHANGE</code></td><td>Rule audit bị thay đổi</td></tr>
+</table>
+
+<table class="en">
+  <tr><th>Field</th><th>Meaning</th><th>Why SOC cares</th></tr>
+  <tr><td><code>auid</code></td><td>Original logged-in user</td><td>Unchanged after <code>sudo</code>/<code>su</code> — traces the real person</td></tr>
+  <tr><td><code>uid</code>, <code>euid</code></td><td>User running the command</td><td>Differs from <code>auid</code> = user switch or escalation</td></tr>
+  <tr><td><code>pid</code>, <code>ppid</code></td><td>Process and parent IDs</td><td>Build the process tree</td></tr>
+  <tr><td><code>tty</code>, <code>ses</code></td><td>Session</td><td>Separate several people on one server</td></tr>
+  <tr><td><code>exe</code>, <code>comm</code></td><td>Program path, short name</td><td>Basis for detection rules</td></tr>
+  <tr><td><code>success</code></td><td>Result</td><td>Many failures = probing</td></tr>
+  <tr><td><code>key</code></td><td>Label from the rule</td><td>Fast filtering</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Trường</th><th>Nghĩa</th><th>Vì sao SOC cần</th></tr>
+  <tr><td><code>auid</code></td><td>User gốc đã đăng nhập</td><td>Không đổi khi <code>sudo</code>/<code>su</code> — truy ra người thật</td></tr>
+  <tr><td><code>uid</code>, <code>euid</code></td><td>User đang chạy lệnh</td><td>Khác <code>auid</code> = đã chuyển user hoặc leo quyền</td></tr>
+  <tr><td><code>pid</code>, <code>ppid</code></td><td>Mã tiến trình và tiến trình cha</td><td>Dựng cây tiến trình</td></tr>
+  <tr><td><code>tty</code>, <code>ses</code></td><td>Phiên làm việc</td><td>Tách hành động của nhiều người trên cùng máy</td></tr>
+  <tr><td><code>exe</code>, <code>comm</code></td><td>Đường dẫn, tên ngắn</td><td>Nền tảng cho rule phát hiện</td></tr>
+  <tr><td><code>success</code></td><td>Kết quả</td><td>Nhiều lần thất bại = dò quét</td></tr>
+  <tr><td><code>key</code></td><td>Nhãn từ rule</td><td>Lọc nhanh</td></tr>
+</table>
+<div class="analogy en">
+  <b>Read it as a sentence:</b> user <code>ubuntu</code> logged in, switched to <code>root</code>, stood in <code>/root</code> and used <code>wget</code>
+  to fetch <code>report.zip</code> at 12:48:19 on 08/12/25, in session <code>pts1</code>.
+</div>
+<div class="analogy vi">
+  <b>Đọc thành câu:</b> user <code>ubuntu</code> đăng nhập, chuyển lên <code>root</code>, đứng ở <code>/root</code> và dùng <code>wget</code>
+  tải <code>report.zip</code> lúc 12:48:19 ngày 12/08/25, trong phiên <code>pts1</code>.
+</div>
+
+<!-- 6 -->
+<h2 id="tim"><span class="en">6. ausearch &amp; aureport</span><span class="vi">6. ausearch &amp; aureport</span></h2>
+<p class="en">Always add <code>-i</code> so numbers become names, command lines are decoded and timestamps are readable. Filters can be combined.</p>
+<p class="vi">Luôn thêm <code>-i</code> để đổi số thành tên, giải mã dòng lệnh và đổi thời gian sang dạng dễ đọc. Các bộ lọc kết hợp được với nhau.</p>
+<table class="en">
+  <tr><th>Goal</th><th>Command</th></tr>
+  <tr><td>By rule key</td><td><code>ausearch -i -k proc_wget</code></td></tr>
+  <tr><td>By program</td><td><code>ausearch -i -x /usr/bin/wget</code></td></tr>
+  <tr><td>By file</td><td><code>ausearch -i -f /etc/passwd</code></td></tr>
+  <tr><td>By syscall</td><td><code>ausearch -i -sc execve</code></td></tr>
+  <tr><td>By original user (auid)</td><td><code>ausearch -i -ul 1000</code></td></tr>
+  <tr><td>By any user id</td><td><code>ausearch -i -ua 1000</code></td></tr>
+  <tr><td>By process / parent</td><td><code>ausearch -i -p 3888</code> / <code>-pp 3888</code></td></tr>
+  <tr><td>By event type</td><td><code>ausearch -i -m USER_LOGIN,USER_CMD</code></td></tr>
+  <tr><td>Failures only</td><td><code>ausearch -i -m USER_LOGIN -sv no</code></td></tr>
+  <tr><td>By time</td><td><code>--start today</code>, <code>recent</code>, <code>yesterday</code>, <code>this-week</code></td></tr>
+  <tr><td>Time range</td><td><code>--start 08/12/25 12:00:00 --end 08/12/25 13:00:00</code></td></tr>
+</table>
+<table class="vi">
+  <tr><th>Mục đích</th><th>Lệnh</th></tr>
+  <tr><td>Theo nhãn rule</td><td><code>ausearch -i -k proc_wget</code></td></tr>
+  <tr><td>Theo chương trình</td><td><code>ausearch -i -x /usr/bin/wget</code></td></tr>
+  <tr><td>Theo file</td><td><code>ausearch -i -f /etc/passwd</code></td></tr>
+  <tr><td>Theo system call</td><td><code>ausearch -i -sc execve</code></td></tr>
+  <tr><td>Theo user gốc (auid)</td><td><code>ausearch -i -ul 1000</code></td></tr>
+  <tr><td>Theo user bất kỳ</td><td><code>ausearch -i -ua 1000</code></td></tr>
+  <tr><td>Theo tiến trình / tiến trình cha</td><td><code>ausearch -i -p 3888</code> / <code>-pp 3888</code></td></tr>
+  <tr><td>Theo loại sự kiện</td><td><code>ausearch -i -m USER_LOGIN,USER_CMD</code></td></tr>
+  <tr><td>Chỉ lần thất bại</td><td><code>ausearch -i -m USER_LOGIN -sv no</code></td></tr>
+  <tr><td>Theo thời gian</td><td><code>--start today</code>, <code>recent</code>, <code>yesterday</code>, <code>this-week</code></td></tr>
+  <tr><td>Khoảng thời gian</td><td><code>--start 08/12/25 12:00:00 --end 08/12/25 13:00:00</code></td></tr>
+</table>
+<p class="en">The date format of <code>--start</code> follows the machine's locale (usually MM/DD/YY).</p>
+<p class="vi">Định dạng ngày của <code>--start</code> theo locale của máy (thường là MM/DD/YY).</p>
+<pre><span class="cm"># Full command line of every wget run</span>
+<span class="u">ausearch</span> <span class="c">-i -k</span> proc_wget | <span class="u">grep</span> proctitle
+
+<span class="cm"># Find a scanner even without a dedicated key</span>
+<span class="u">ausearch</span> <span class="c">-i -sc</span> execve | <span class="u">grep</span> <span class="f">-E</span> 'nmap|masscan|nc '
+
+<span class="cm"># Count events for a key</span>
+<span class="u">ausearch</span> <span class="c">-k</span> identity | <span class="u">grep</span> <span class="f">-c</span> '^type=SYSCALL'</pre>
+
+<table class="en">
+  <tr><th>Report</th><th>Command</th></tr>
+  <tr><td>System overview</td><td><code>aureport --summary</code></td></tr>
+  <tr><td>Programs run, with counts</td><td><code>aureport -x --summary</code></td></tr>
+  <tr><td>Most-touched files</td><td><code>aureport -f --summary</code></td></tr>
+  <tr><td>Events per key</td><td><code>aureport -k --summary</code></td></tr>
+  <tr><td>Logins</td><td><code>aureport -l</code></td></tr>
+  <tr><td>Authentication</td><td><code>aureport -au</code></td></tr>
+  <tr><td>Account changes</td><td><code>aureport -m</code></td></tr>
+  <tr><td>Failed events</td><td><code>aureport --failed</code></td></tr>
+</table>
+<table class="vi">
+  <tr><th>Báo cáo</th><th>Lệnh</th></tr>
+  <tr><td>Tổng quan hệ thống</td><td><code>aureport --summary</code></td></tr>
+  <tr><td>Chương trình đã chạy, đếm số lần</td><td><code>aureport -x --summary</code></td></tr>
+  <tr><td>File bị chạm nhiều nhất</td><td><code>aureport -f --summary</code></td></tr>
+  <tr><td>Số sự kiện theo key</td><td><code>aureport -k --summary</code></td></tr>
+  <tr><td>Đăng nhập</td><td><code>aureport -l</code></td></tr>
+  <tr><td>Xác thực</td><td><code>aureport -au</code></td></tr>
+  <tr><td>Thay đổi tài khoản</td><td><code>aureport -m</code></td></tr>
+  <tr><td>Sự kiện thất bại</td><td><code>aureport --failed</code></td></tr>
+</table>
+<p class="en">Each <code>aureport</code> line ends with an event number; open it with <code>ausearch -i -a &lt;number&gt;</code>.</p>
+<p class="vi">Mỗi dòng của <code>aureport</code> có số sự kiện ở cuối; xem chi tiết bằng <code>ausearch -i -a &lt;số&gt;</code>.</p>
+
+<!-- 7 -->
+<h2 id="dt"><span class="en">7. Investigation walkthrough</span><span class="vi">7. Kịch bản điều tra mẫu</span></h2>
+<p class="en">Scenario: an alert says a Linux host just downloaded a file from GitHub. Rebuild the chain: who, what was downloaded, what ran next, which files were touched.</p>
+<p class="vi">Tình huống: cảnh báo cho biết một máy Linux vừa tải file từ GitHub. Dựng lại chuỗi hành động: ai, tải gì, chạy gì tiếp, chạm file nào.</p>
+<ol class="en">
+  <li><b>Overview.</b> <code>aureport -k --summary</code> and <code>aureport -x --summary</code> to spot unusual keys and programs.</li>
+  <li><b>Find the download.</b> <code>ausearch -i -k proc_wget | grep proctitle</code> — the URL end gives the source and original filename.</li>
+  <li><b>Take the "fingerprint".</b> From its <code>SYSCALL</code> line note time, <code>auid</code>, <code>uid</code>, <code>pid</code>, <code>ppid</code>, <code>tty</code>.</li>
+  <li><b>What did they do next?</b> <code>ausearch -i -ul &lt;auid&gt; -sc execve --start &lt;time&gt; | grep proctitle</code></li>
+  <li><b>Actions with no key.</b> If the file is a scanner, search everything: <code>ausearch -i | grep -i &lt;tool&gt;</code>. Target ranges appear in <code>a1</code>, <code>a2</code>…</li>
+  <li><b>Process tree.</b> <code>ausearch -i -pp &lt;pid&gt;</code> for children, <code>ausearch -i -p &lt;ppid&gt;</code> for the parent.</li>
+  <li><b>Sensitive files.</b> <code>ausearch -i -k file_thmsecret</code> — results are chronological, so the first event is the first open.</li>
+  <li><b>Persistence &amp; cleanup.</b> Check <code>-k identity</code>, <code>cron</code>, <code>sshd_conf</code>, <code>audit_tamper</code> in the same window.</li>
+  <li><b>Write the timeline.</b> Time · user · command · meaning — the final deliverable.</li>
+</ol>
+<ol class="vi">
+  <li><b>Nhìn tổng quan.</b> <code>aureport -k --summary</code> và <code>aureport -x --summary</code> để thấy key và chương trình bất thường.</li>
+  <li><b>Tìm lần tải file.</b> <code>ausearch -i -k proc_wget | grep proctitle</code> — cuối URL cho biết nguồn và tên file gốc.</li>
+  <li><b>Ghi "dấu vân tay".</b> Từ dòng <code>SYSCALL</code> chép lại thời gian, <code>auid</code>, <code>uid</code>, <code>pid</code>, <code>ppid</code>, <code>tty</code>.</li>
+  <li><b>Họ làm gì tiếp?</b> <code>ausearch -i -ul &lt;auid&gt; -sc execve --start &lt;thời gian&gt; | grep proctitle</code></li>
+  <li><b>Hành động không có key.</b> Nếu file là công cụ quét, tìm trong toàn bộ log: <code>ausearch -i | grep -i &lt;tên công cụ&gt;</code>. Dải mạng nằm ở <code>a1</code>, <code>a2</code>…</li>
+  <li><b>Cây tiến trình.</b> <code>ausearch -i -pp &lt;pid&gt;</code> xem tiến trình con, <code>ausearch -i -p &lt;ppid&gt;</code> đi ngược lên cha.</li>
+  <li><b>File nhạy cảm.</b> <code>ausearch -i -k file_thmsecret</code> — kết quả xếp theo thời gian, sự kiện đầu tiên là lần mở đầu tiên.</li>
+  <li><b>Persistence &amp; xóa dấu vết.</b> Kiểm tra <code>-k identity</code>, <code>cron</code>, <code>sshd_conf</code>, <code>audit_tamper</code> trong cùng khoảng thời gian.</li>
+  <li><b>Viết dòng thời gian.</b> Giờ · user · lệnh · ý nghĩa — kết quả cuối cùng của cuộc điều tra.</li>
+</ol>
+
+<!-- 8 -->
+<h2 id="blue"><span class="en">8. Blue-team view</span><span class="vi">8. Góc blue team</span></h2>
+<div class="card blue">
+  <h3 class="en">Common pitfalls</h3>
+  <h3 class="vi">Lỗi thường gặp</h3>
+  <table class="en">
+    <tr><th>Problem</th><th>Fix</th></tr>
+    <tr><td>Edited rules have no effect</td><td>Edit <code>rules.d/</code>, not <code>audit.rules</code>, then <code>augenrules --load</code></td></tr>
+    <tr><td>Can't change rules</td><td><code>-e 2</code> is on — edit the file and reboot</td></tr>
+    <tr><td><code>exe=</code> catches nothing</td><td>Path is a symlink — use <code>readlink -f</code></td></tr>
+    <tr><td>Some commands missing</td><td>Add the matching <code>arch=b32</code> line</td></tr>
+    <tr><td>Gigabytes of logs per day</td><td>Add <code>auid&gt;=1000 auid!=unset</code>; drop noise with <code>-a never,exit</code> rules placed first</td></tr>
+    <tr><td>Disk fills up</td><td><code>auditd.conf</code>: <code>max_log_file</code>, <code>num_logs</code>, <code>max_log_file_action = ROTATE</code></td></tr>
+    <tr><td><code>lost</code> keeps rising</td><td>Raise <code>-b</code> (8192 or 16384)</td></tr>
+    <tr><td>Attacker deletes <code>audit.log</code></td><td>Forward logs to a SIEM in real time (auditd syslog plugin)</td></tr>
+  </table>
+  <table class="vi">
+    <tr><th>Vấn đề</th><th>Cách xử lý</th></tr>
+    <tr><td>Sửa rule xong không có tác dụng</td><td>Sửa trong <code>rules.d/</code>, không sửa <code>audit.rules</code>, rồi <code>augenrules --load</code></td></tr>
+    <tr><td>Không đổi được rule</td><td>Đã bật <code>-e 2</code> — sửa file rồi khởi động lại</td></tr>
+    <tr><td><code>exe=</code> không bắt được gì</td><td>Đường dẫn là symlink — dùng <code>readlink -f</code></td></tr>
+    <tr><td>Bỏ sót một số lệnh</td><td>Thêm dòng <code>arch=b32</code> tương ứng</td></tr>
+    <tr><td>Log hàng GB mỗi ngày</td><td>Thêm <code>auid&gt;=1000 auid!=unset</code>; lọc nhiễu bằng rule <code>-a never,exit</code> đặt trước</td></tr>
+    <tr><td>Đầy đĩa</td><td><code>auditd.conf</code>: <code>max_log_file</code>, <code>num_logs</code>, <code>max_log_file_action = ROTATE</code></td></tr>
+    <tr><td><code>lost</code> tăng liên tục</td><td>Tăng <code>-b</code> (8192 hoặc 16384)</td></tr>
+    <tr><td>Kẻ tấn công xóa <code>audit.log</code></td><td>Gửi log về SIEM theo thời gian thực (plugin syslog của auditd)</td></tr>
+  </table>
+  <p class="en"><b>MITRE ATT&amp;CK coverage examples:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1136</code> (Create Account), <code>T1053.003</code> (Cron), <code>T1098.004</code> (SSH Authorized Keys), <code>T1070</code> (Indicator Removal).</p>
+  <p class="vi"><b>Ví dụ kỹ thuật MITRE ATT&amp;CK phát hiện được:</b> <code>T1105</code> (Ingress Tool Transfer), <code>T1136</code> (Create Account), <code>T1053.003</code> (Cron), <code>T1098.004</code> (SSH Authorized Keys), <code>T1070</code> (Indicator Removal).</p>
+  <div class="analogy en">
+    <b>Analogy:</b> auditd is only as good as where you point the cameras. Too few and the intruder walks past unseen;
+    too many and the one important clip is buried under a terabyte of hallway footage.
+  </div>
+  <div class="analogy vi">
+    <b>Ví von:</b> auditd tốt đến đâu phụ thuộc vào chỗ bạn hướng camera. Quá ít thì kẻ xâm nhập đi qua không ai thấy;
+    quá nhiều thì đoạn băng quan trọng bị chôn dưới hàng terabyte cảnh hành lang.
+  </div>
+</div>
+
+<h3 class="en">Cheat sheet</h3>
+<h3 class="vi">Bảng tra nhanh</h3>
+<table class="en">
+  <tr><th>Task</th><th>Command</th></tr>
+  <tr><td>Status</td><td><code>sudo auditctl -s</code></td></tr>
+  <tr><td>List loaded rules</td><td><code>sudo auditctl -l</code></td></tr>
+  <tr><td>Reload from <code>rules.d</code></td><td><code>sudo augenrules --load</code></td></tr>
+  <tr><td>Temporary rule</td><td><code>sudo auditctl -w /etc/hosts -p wa -k hosts</code></td></tr>
+  <tr><td>Remove temporary rules</td><td><code>sudo auditctl -D</code></td></tr>
+  <tr><td>Search by key</td><td><code>sudo ausearch -i -k &lt;key&gt;</code></td></tr>
+  <tr><td>Overview</td><td><code>sudo aureport --summary</code></td></tr>
+  <tr><td>Programs executed</td><td><code>sudo aureport -x --summary</code></td></tr>
+</table>
+<table class="vi">
+  <tr><th>Việc cần làm</th><th>Lệnh</th></tr>
+  <tr><td>Trạng thái</td><td><code>sudo auditctl -s</code></td></tr>
+  <tr><td>Xem rule đang nạp</td><td><code>sudo auditctl -l</code></td></tr>
+  <tr><td>Nạp lại từ <code>rules.d</code></td><td><code>sudo augenrules --load</code></td></tr>
+  <tr><td>Thêm rule tạm thời</td><td><code>sudo auditctl -w /etc/hosts -p wa -k hosts</code></td></tr>
+  <tr><td>Xóa rule tạm thời</td><td><code>sudo auditctl -D</code></td></tr>
+  <tr><td>Tìm theo key</td><td><code>sudo ausearch -i -k &lt;key&gt;</code></td></tr>
+  <tr><td>Tổng quan</td><td><code>sudo aureport --summary</code></td></tr>
+  <tr><td>Chương trình đã chạy</td><td><code>sudo aureport -x --summary</code></td></tr>
+</table>
+
+<h3 class="en">When is auditd the right tool?</h3>
+<h3 class="vi">Khi nào nên dùng auditd?</h3>
+<table class="en">
+  <tr><th>Situation</th><th>Is auditd a good fit?</th></tr>
+  <tr><td>Who changed a critical file, even as root</td><td><span class="pill ok">FIT</span> <code>auid</code> survives <code>sudo</code></td></tr>
+  <tr><td>Track command execution after bash history was wiped</td><td><span class="pill ok">FIT</span> Logged from the kernel</td></tr>
+  <tr><td>Compliance auditing (PCI-DSS, CIS)</td><td><span class="pill ok">FIT</span> Built in, standard rulesets exist</td></tr>
+  <tr><td>Container-heavy hosts (Kubernetes)</td><td><span class="pill no">WEAK</span> Falco gives better container context</td></tr>
+  <tr><td>Easy SIEM ingestion, readable output</td><td><span class="pill no">WEAK</span> Sysmon for Linux or an EDR is easier</td></tr>
+</table>
+<table class="vi">
+  <tr><th>Tình huống</th><th>auditd có hợp không?</th></tr>
+  <tr><td>Ai sửa file quan trọng, kể cả khi đã lên root</td><td><span class="pill ok">HỢP</span> <code>auid</code> giữ nguyên qua <code>sudo</code></td></tr>
+  <tr><td>Theo dõi lệnh dù bash history đã bị xóa</td><td><span class="pill ok">HỢP</span> Ghi từ kernel</td></tr>
+  <tr><td>Kiểm toán tuân thủ (PCI-DSS, CIS)</td><td><span class="pill ok">HỢP</span> Có sẵn, có bộ rule chuẩn</td></tr>
+  <tr><td>Máy chạy nhiều container (Kubernetes)</td><td><span class="pill no">KÉM</span> Falco hiểu ngữ cảnh container tốt hơn</td></tr>
+  <tr><td>Cần đưa vào SIEM dễ, output dễ đọc</td><td><span class="pill no">KÉM</span> Sysmon for Linux hoặc EDR tiện hơn</td></tr>
+</table>
+<p class="en">👉 Sysmon for Linux, Falco, Osquery and EDRs all rely on the same principle — monitoring system calls. Learn auditd and the rest come faster.</p>
+<p class="vi">👉 Sysmon for Linux, Falco, Osquery và EDR đều dựa trên cùng nguyên lý — theo dõi system call. Hiểu auditd thì học các công cụ kia nhanh hơn.</p>
+
+<footer>
+  <span class="en">Reference page for learning · based on TryHackMe <i>Linux Logging for SOC</i> (Task 6) &amp; the
+  <a href="https://github.com/Neo23x0/auditd">Neo23x0/auditd</a> ruleset · Test rules on lab machines before production.</span>
+  <span class="vi">Trang tra cứu học tập · dựa trên TryHackMe <i>Linux Logging for SOC</i> (Task 6) &amp; bộ rule
+  <a href="https://github.com/Neo23x0/auditd">Neo23x0/auditd</a> · Thử rule trên máy lab trước khi đưa vào production.</span>
+</footer>
+</div>
+
+<script>
+  function setLang(l){
+    document.documentElement.lang=l;
+    try{localStorage.setItem('ref-lang',l);}catch(e){}
+    document.querySelectorAll('.lang button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.lang===l ? 'true':'false');
+    });
+  }
+  function setTheme(t){
+    document.documentElement.setAttribute('data-theme',t);
+    try{localStorage.setItem('ref-theme',t);}catch(e){}
+    document.querySelectorAll('.theme button').forEach(function(b){
+      b.setAttribute('aria-pressed', b.dataset.theme===t ? 'true':'false');
+    });
+  }
+  document.querySelectorAll('.lang button').forEach(function(b){
+    b.addEventListener('click',function(){setLang(b.dataset.lang);});
+  });
+  document.querySelectorAll('.theme button').forEach(function(b){
+    b.addEventListener('click',function(){setTheme(b.dataset.theme);});
+  });
+  setLang(document.documentElement.lang);
+  setTheme(document.documentElement.getAttribute('data-theme')||'dark');
+</script>
+</body>
+</html>

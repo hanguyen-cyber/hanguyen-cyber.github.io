@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="dark">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Điều tra Phishing-Sysmon.evtx — Hướng dẫn step by step</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0e1117; --card:#161b24; --card2:#1c2230; --ink:#e3e8f1; --muted:#9aa5b8; --line:#2a3242;
+    --accent:#7aa2ff; --accent-soft:#1c2a4a; --warn:#f5b45a; --warn-soft:#2e2313;
+    --bad:#ff7b72; --bad-soft:#331a1a; --ok:#56d391; --ok-soft:#14291f;
+    --code:#0a0d13; --code-ink:#dfe6f3; --inline:#232b3b; --th:#1f2636;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;font-size:15.5px}
+  header{background:linear-gradient(135deg,#0d1a3a,#24418f);border-bottom:1px solid var(--line);color:#fff;padding:36px 24px 30px}
+  header .wrap{max-width:1040px;margin:auto}
+  header h1{margin:0 0 6px;font-size:28px}
+  header p{margin:0;opacity:.9}
+  nav.toc{max-width:1040px;margin:18px auto 0;padding:0 24px;display:flex;flex-wrap:wrap;gap:8px}
+  nav.toc a{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 13px;color:var(--ink);text-decoration:none;font-size:14px}
+  nav.toc a:hover{background:var(--card2);border-color:var(--accent);color:var(--accent)}
+  main{max-width:1040px;margin:auto;padding:10px 24px 60px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin:22px 0}
+  h2{margin:0 0 14px;font-size:22px}
+  h3{margin:22px 0 8px;font-size:17.5px}
+  .muted{color:var(--muted)}
+  code{font-family:Consolas,"Cascadia Code",monospace;font-size:13.5px;background:var(--inline);color:#ffd59a;padding:1px 6px;border-radius:5px}
+  pre{position:relative;border:1px solid var(--line);background:var(--code);color:var(--code-ink);padding:16px 16px 14px;border-radius:10px;overflow:auto;font-size:13.5px;line-height:1.5;margin:10px 0 14px}
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  .copy{position:absolute;top:8px;right:8px;background:#2a3348;color:#cfd8ea;border:0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+  .copy:hover{background:#3a4662}
+  .c{color:#7f8ca6} .k{color:#9cc3ff} .s{color:#b9e6a5} .v{color:#ffcf8a}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;margin:8px 0 6px}
+  th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--th);font-weight:600}
+  .pill{display:inline-block;border-radius:6px;padding:0 8px;font-weight:600;font-size:13px;background:var(--accent-soft);color:var(--accent)}
+  .box{border-radius:10px;padding:12px 16px;margin:12px 0}
+  .tip{background:var(--accent-soft);border-left:4px solid var(--accent)}
+  .warn{background:var(--warn-soft);border-left:4px solid var(--warn)}
+  .bad{background:var(--bad-soft);border-left:4px solid var(--bad)}
+  .ok{background:var(--ok-soft);border-left:4px solid var(--ok)}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;background:var(--card2)}
+  details summary{cursor:pointer;font-weight:600}
+  .answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:12px}
+  .ans{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--card)}
+  .ans .q{font-size:13px;color:var(--muted)}
+  .ans .a{color:var(--ok);font-family:Consolas,monospace;font-weight:700;font-size:15px;word-break:break-all;margin-top:4px}
+  .ans .src{font-size:12.5px;color:var(--muted);margin-top:4px}
+  /* flow */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:14px 0}
+  .flow .st{flex:1 1 170px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--card2);position:relative}
+  .flow .st b{display:block;font-size:15px}
+  .flow .arrow{display:flex;align-items:center;padding:0 6px;color:var(--muted);font-size:22px}
+  .flow .st .ids{margin-top:6px}
+  /* tabs */
+  .tabs{display:flex;gap:6px;border-bottom:2px solid var(--line);margin-bottom:16px}
+  .tabs button{border:0;background:none;padding:10px 16px;font-size:15.5px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .tabs button.active{color:var(--accent);border-color:var(--accent)}
+  .panel{display:none}
+  .panel.active{display:block}
+  .step{border-left:3px solid var(--accent);padding:2px 0 2px 16px;margin:20px 0}
+  .step > h3{margin-top:0}
+  .stepno{display:inline-block;background:var(--accent);color:#0e1117;border-radius:6px;padding:0 8px;margin-right:6px;font-size:14px}
+  /* tree */
+  .tree{font-family:Consolas,monospace;font-size:13.5px;background:var(--code);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow:auto;white-space:pre;line-height:1.55}
+  .tree .m{color:var(--bad);font-weight:700}
+  .tree .g{color:var(--muted)}
+  /* timeline */
+  .tl{position:relative;margin:10px 0 0 8px;padding-left:22px;border-left:2px solid var(--line)}
+  .tl .it{position:relative;margin:0 0 14px}
+  .tl .it::before{content:"";position:absolute;left:-29px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--card);box-shadow:0 0 0 1px var(--accent)}
+  .tl .it.red::before{background:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+  .tl .t{font-family:Consolas,monospace;font-size:13px;color:var(--muted)}
+  .kbd{border:1px solid #4a5568;border-bottom-width:2px;border-radius:5px;padding:0 6px;font-size:13px;background:var(--card2);font-family:inherit}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:760px){.two{grid-template-columns:1fr}.flow .arrow{display:none}.flow .st{margin:4px 0}}
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 0 40px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>🔎 Điều tra Phishing-Sysmon.evtx</h1>
+    <p>Hướng dẫn từng bước tìm: file tải qua browser → thư mục giải nén → PID của malware → domain độc hại. Làm theo 2 cách: <b>PowerShell</b> và <b>Event Viewer</b>.</p>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#answers">Đáp án</a>
+  <a href="#mental">Tư duy điều tra</a>
+  <a href="#ids">Bảng Event ID</a>
+  <a href="#howto">Step by step</a>
+  <a href="#parent">Quan hệ cha – con</a>
+  <a href="#timeline">Timeline tấn công</a>
+  <a href="#pitfalls">Bẫy thường gặp</a>
+</nav>
+
+<main>
+
+<!-- ============ ANSWERS ============ -->
+<section id="answers">
+  <h2>🎯 Đáp án (bấm để mở — nên tự làm trước)</h2>
+  <details>
+    <summary>Hiện đáp án</summary>
+    <div class="answers">
+      <div class="ans"><div class="q">1. File được download qua browser</div><div class="a">top-cats.zip</div><div class="src">Event ID 15 · msedge.exe · HostUrl=http://10.14.97.15/top-cats-2025/top-cats.zip · Record 4822</div></div>
+      <div class="ans"><div class="q">2. Thư mục user giải nén file</div><div class="a">C:\Users\Administrator\Pictures</div><div class="src">Event ID 11 · Explorer.EXE tạo best-cat.jpg.exe · Record 4823</div></div>
+      <div class="ans"><div class="q">3. PID của malware được chạy</div><div class="a">5484</div><div class="src">Event ID 1 · best-cat.jpg.exe · cha là explorer.exe (PID 2788) · Record 4839</div></div>
+      <div class="ans"><div class="q">4. Domain độc hại malware gọi tới</div><div class="a">rjj.store</div><div class="src">Event ID 22 · ProcessId 5484 · Record 4842, 4843</div></div>
+    </div>
+  </details>
+  <p class="muted" style="margin-bottom:0">File log có 48 event, Record ID 4798 → 4845, thời gian 2025-05-20 18:57–18:59 (UTC), máy <code>THM-PC</code>, user <code>THM-PC\Administrator</code>.</p>
+</section>
+
+<!-- ============ MENTAL MODEL ============ -->
+<section id="mental">
+  <h2>🧠 Tư duy điều tra: đi theo "con đường" của file độc</h2>
+  <p>Hãy hình dung Sysmon như <b>hệ thống camera an ninh</b> trong một toà nhà. Mỗi <b>Event ID</b> là một loại camera chuyên quay một kiểu hành động: camera ở cửa ra vào (process start), camera ở kho (file tạo mới), camera ở tổng đài điện thoại (DNS)… Muốn biết kẻ gian làm gì, ta không xem lần lượt hết các camera, mà <b>đi theo hành trình</b> của nó và mở đúng camera cho từng chặng.</p>
+
+  <div class="flow">
+    <div class="st"><b>① Tải về</b>Browser ghi file vào Downloads<div class="ids"><span class="pill">ID 11</span> <span class="pill">ID 15</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>② Giải nén</b>explorer.exe bung file ra 1 thư mục<div class="ids"><span class="pill">ID 11</span> <span class="pill">ID 15</span> <span class="pill">ID 2</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>③ Chạy file</b>User double-click → process mới<div class="ids"><span class="pill">ID 1</span></div></div>
+    <div class="arrow">➜</div>
+    <div class="st"><b>④ Gọi về C2</b>Malware tra DNS / kết nối mạng<div class="ids"><span class="pill">ID 22</span> <span class="pill">ID 3</span></div></div>
+  </div>
+
+  <p>Mỗi câu hỏi của bài ứng với một chặng:</p>
+  <table>
+    <tr><th>Câu hỏi</th><th>Chặng</th><th>Event ID cần lọc</th><th>Field cần đọc</th></tr>
+    <tr><td>File nào được download qua browser?</td><td>①</td><td><span class="pill">11</span> <span class="pill">15</span></td><td><code>Image</code> (msedge/chrome), <code>TargetFilename</code>, <code>Contents</code> (HostUrl)</td></tr>
+    <tr><td>User giải nén vào thư mục nào?</td><td>②</td><td><span class="pill">11</span> <span class="pill">15</span></td><td><code>Image</code> = explorer.exe, <code>TargetFilename</code>, <code>Contents</code> (ReferrerUrl = file .zip)</td></tr>
+    <tr><td>PID của malware?</td><td>③</td><td><span class="pill">1</span></td><td><code>Image</code>, <code>ProcessId</code>, <code>ProcessGuid</code>, <code>ParentImage</code></td></tr>
+    <tr><td>Domain malware kết nối tới?</td><td>④</td><td><span class="pill">22</span> (và <span class="pill">3</span> nếu có)</td><td><code>ProcessGuid</code>/<code>ProcessId</code> khớp malware → <code>QueryName</code></td></tr>
+  </table>
+
+  <div class="box tip"><b>Chìa khoá xâu chuỗi:</b> <code>ProcessGuid</code>. Hãy coi nó như <b>số CCCD</b> của một process: suốt đời không trùng với ai. Còn <code>ProcessId</code> (PID) giống <b>số ghế</b> trong rạp: người này đứng dậy thì người khác có thể ngồi vào cùng số ghế. Vì vậy khi nối các event với nhau, ưu tiên GUID, PID chỉ dùng để đọc cho dễ.</div>
+</section>
+
+<!-- ============ EVENT IDS ============ -->
+<section id="ids">
+  <h2>📋 Bảng Event ID Sysmon xuất hiện trong file này</h2>
+  <table>
+    <tr><th>ID</th><th>Tên (Task Category)</th><th>Số lượng</th><th>Ý nghĩa / field quan trọng</th></tr>
+    <tr><td><span class="pill">1</span></td><td>Process Create</td><td>14</td><td>Một process được tạo. <code>Image</code>, <code>CommandLine</code>, <code>ProcessId</code>, <code>ProcessGuid</code>, <code>ParentImage</code>, <code>ParentProcessId</code>, <code>ParentProcessGuid</code></td></tr>
+    <tr><td><span class="pill">2</span></td><td>File creation time changed</td><td>1</td><td>Đổi creation time của file. Ở đây là Explorer giữ nguyên timestamp gốc trong zip khi giải nén (bình thường), nhưng cũng là dấu hiệu timestomping cần để ý.</td></tr>
+    <tr><td><span class="pill">5</span></td><td>Process terminated</td><td>1</td><td>Process kết thúc — malware 5484 tắt lúc 18:59:37.</td></tr>
+    <tr><td><span class="pill">10</span></td><td>Process accessed</td><td>6</td><td>svchost truy cập lsass với <code>GrantedAccess 0x1000</code> (chỉ query thông tin) → nhiễu, không liên quan.</td></tr>
+    <tr><td><span class="pill">11</span></td><td>File created</td><td>4</td><td>File mới được tạo. <code>Image</code> (ai tạo), <code>TargetFilename</code> (tạo ở đâu)</td></tr>
+    <tr><td><span class="pill">12/13</span></td><td>Registry delete / set value</td><td>1 / 3</td><td>Thay đổi registry. Ở đây là Compatibility Assistant ghi nhận best-cat.jpg.exe vừa chạy.</td></tr>
+    <tr><td><span class="pill">15</span></td><td>File stream created</td><td>14</td><td>Tạo Alternate Data Stream. Quan trọng nhất là <code>:Zone.Identifier</code> = <b>Mark-of-the-Web</b>, field <code>Contents</code> chứa <code>HostUrl</code> (URL tải về) và <code>ReferrerUrl</code>.</td></tr>
+    <tr><td><span class="pill">22</span></td><td>DNS query</td><td>4</td><td>Process tra DNS. <code>QueryName</code> (domain), <code>QueryStatus</code>, <code>QueryResults</code> (IP trả về)</td></tr>
+    <tr><td><span class="pill">3</span></td><td>Network connection</td><td><b>0</b></td><td>Không có — vì DNS của rjj.store thất bại nên malware chưa có IP để kết nối.</td></tr>
+  </table>
+  <div class="box tip"><b>Zone.Identifier (Mark-of-the-Web)</b> giống <b>con tem "hàng nhập từ Internet"</b> mà Windows dán lên file. <code>ZoneId=3</code> = vùng Internet. Khi giải nén, Windows dán tem tiếp lên từng file con và ghi <code>ReferrerUrl</code> = đường dẫn file zip mẹ. Nhờ vậy ta lần ngược được file con sinh ra từ đâu.</div>
+</section>
+
+<!-- ============ HOW TO ============ -->
+<section id="howto">
+  <h2>🛠️ Step by step</h2>
+  <div class="tabs">
+    <button class="active" data-tab="ps">⚡ Cách 1 — PowerShell</button>
+    <button data-tab="ev">🖥️ Cách 2 — Event Viewer</button>
+  </div>
+
+  <!-- ===== POWERSHELL ===== -->
+  <div class="panel active" id="ps">
+    <div class="box warn">Chạy trên Windows PowerShell 5.1 hoặc PowerShell 7 trên Windows (<code>Get-WinEvent</code> không có trên Linux/macOS). Sửa <code>$Path</code> thành đường dẫn thật của file .evtx.</div>
+
+    <div class="step">
+      <h3><span class="stepno">B0</span>Nạp log và "dịch" event thành bảng dễ đọc</h3>
+      <p>Mặc định <code>Get-WinEvent</code> trả về <code>Message</code> là một khối chữ dài, khó lọc. Hàm dưới đây đọc phần XML của từng event và biến mỗi <code>&lt;Data Name="..."&gt;</code> thành một cột riêng (Image, ProcessId, TargetFilename…), giống như tách một tờ hoá đơn thành từng ô trong Excel.</p>
+<pre><code><span class="v">$Path</span> = <span class="s">"C:\Labs\Phishing-Sysmon.evtx"</span>   <span class="c"># &lt;-- sửa đường dẫn</span>
+<span class="v">$Raw</span>  = <span class="k">Get-WinEvent</span> -Path <span class="v">$Path</span> -Oldest
+
+<span class="k">function</span> ConvertTo-SysmonObject {
+    <span class="k">process</span> {
+        <span class="v">$xml</span> = [xml]<span class="v">$_</span>.ToXml()
+        <span class="v">$o</span> = [ordered]@{
+            RecordId = <span class="v">$_</span>.RecordId
+            EventId  = <span class="v">$_</span>.Id
+            Time     = <span class="v">$_</span>.TimeCreated        <span class="c"># giờ theo máy bạn</span>
+        }
+        <span class="k">foreach</span> (<span class="v">$d</span> <span class="k">in</span> <span class="v">$xml</span>.Event.EventData.Data) { <span class="v">$o</span>[<span class="v">$d</span>.Name] = <span class="v">$d</span>.<span class="s">'#text'</span> }
+        [pscustomobject]<span class="v">$o</span>
+    }
+}
+
+<span class="v">$Ev</span> = <span class="v">$Raw</span> | ConvertTo-SysmonObject
+<span class="v">$Ev</span>.Count     <span class="c"># 48</span></code></pre>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B1</span>Nhìn tổng quan: log có những loại event nào?</h3>
+<pre><code><span class="v">$Ev</span> | <span class="k">Group-Object</span> EventId | <span class="k">Sort-Object</span> Count -Descending | <span class="k">Select-Object</span> Count, Name</code></pre>
+      <p>Kết quả: ID 1 (14), 15 (14), 10 (6), 22 (4), 11 (4), 13 (3), 2, 12, 5 (mỗi loại 1). Có ID 11/15 → có file được tạo; có ID 22 → có tra DNS. Đủ "camera" cho cả 4 câu hỏi.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B2</span>File nào được download qua browser? <span class="pill">ID 11</span> <span class="pill">ID 15</span></h3>
+      <p><b>a) File do browser tạo ra:</b></p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-in</span> 11,15 <span class="k">-and</span> <span class="v">$_</span>.Image <span class="k">-match</span> <span class="s">'msedge|chrome|firefox'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, EventId, ProcessId, TargetFilename</code></pre>
+      <p>Bạn sẽ thấy chuỗi: <code>9136f7a3-...tmp</code> → <code>Unconfirmed 109024.crdownload</code> → <code>top-cats.zip</code>. Đây là cách Edge tải file: ghi tạm vào file <code>.crdownload</code>, tải xong thì đổi tên thành tên thật. Để ý MD5 của <code>.crdownload</code> và <code>top-cats.zip</code> giống nhau (<code>E456B52C…</code>), tức là cùng một file.</p>
+      <p><b>b) Xác nhận bằng Mark-of-the-Web (lấy luôn URL nguồn):</b></p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 15 <span class="k">-and</span> <span class="v">$_</span>.Contents <span class="k">-match</span> <span class="s">'HostUrl'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, Image, TargetFilename, Contents | <span class="k">Format-List</span></code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+<pre><code>RecordId       : 4822
+Image          : C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe
+TargetFilename : C:\Users\Administrator\Downloads\top-cats.zip:Zone.Identifier
+Contents       : [ZoneTransfer]  ZoneId=3  ReferrerUrl=http://10.14.97.15/top-cats-2025/
+                 HostUrl=http://10.14.97.15/top-cats-2025/top-cats.zip</code></pre>
+      → File tải về: <b>top-cats.zip</b>.</details>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B3</span>User giải nén file đáng ngờ vào thư mục nào? <span class="pill">ID 11</span> <span class="pill">ID 15</span></h3>
+      <p>Khi user mở file zip bằng Windows Explorer rồi kéo/thả hoặc "Extract", process tạo file là <code>explorer.exe</code> chứ không phải browser. Lọc theo đó:</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-in</span> 2,11,15 <span class="k">-and</span> <span class="v">$_</span>.Image <span class="k">-like</span> <span class="s">'*explorer.exe'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, EventId, TargetFilename, Contents | <span class="k">Format-List</span></code></pre>
+      <p>Hoặc chỉ lấy thư mục của những file có "tem" trỏ về file zip mẹ:</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 15 <span class="k">-and</span> <span class="v">$_</span>.Contents <span class="k">-match</span> <span class="s">'ReferrerUrl=.*\.zip'</span> } |
+      <span class="k">ForEach-Object</span> { <span class="k">Split-Path</span> (<span class="v">$_</span>.TargetFilename <span class="k">-replace</span> <span class="s">':Zone\.Identifier$'</span>,<span class="s">''</span>) } |
+      <span class="k">Sort-Object</span> -Unique</code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+      3 file được bung ra: <code>best-cat.jpg.exe</code>, <code>nice-cat-1.jpg</code>, <code>nice-cat-2.png</code>, đều có <code>ReferrerUrl=C:\Users\Administrator\Downloads\top-cats.zip</code>.<br>
+      → Thư mục: <b>C:\Users\Administrator\Pictures</b>.<br>
+      Ghi lại <code>ProcessGuid</code> của explorer: <code>{c5d2b969-2e42-682b-4a02-000000001801}</code> (PID 2788) để dùng ở bước sau.</details>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B4</span>PID của phishing malware khi được chạy <span class="pill">ID 1</span></h3>
+      <p>File chạy bằng double-click thì cha của nó là <code>explorer.exe</code>. Liệt kê các process con của explorer:</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.ParentImage <span class="k">-like</span> <span class="s">'*explorer.exe'</span> } |
+      <span class="k">Select-Object</span> RecordId, Time, ProcessId, Image, CommandLine</code></pre>
+      <p>Hoặc săn thẳng file <b>đuôi kép</b> (kiểu <code>.jpg.exe</code> — Windows ẩn đuôi <code>.exe</code> nên user chỉ thấy "best-cat.jpg"):</p>
+<pre><code><span class="v">$Mal</span> = <span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.Image <span class="k">-match</span> <span class="s">'\.(jpg|jpeg|png|pdf|docx?|xlsx?)\.exe$'</span> }
+<span class="v">$Mal</span> | <span class="k">Select-Object</span> Time, ProcessId, ProcessGuid, Image, ParentProcessId, ParentImage</code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+      2 process <code>mspaint.exe</code> (PID 1668, 4468) mở 2 ảnh mồi, và <code>C:\Users\Administrator\Pictures\best-cat.jpg.exe</code>.<br>
+      → PID malware: <b>5484</b>, ProcessGuid <code>{c5d2b969-d0fa-682c-2b05-000000001801}</code>.</details>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B5</span>Domain độc hại mà malware cố kết nối tới <span class="pill">ID 22</span></h3>
+      <p>Lấy GUID của malware ở B4 rồi tìm mọi DNS query có cùng GUID:</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-in</span> 3,22 <span class="k">-and</span> <span class="v">$_</span>.ProcessGuid <span class="k">-eq</span> <span class="v">$Mal</span>.ProcessGuid } |
+      <span class="k">Select-Object</span> RecordId, Time, ProcessId, QueryName, QueryStatus, QueryResults, DestinationIp</code></pre>
+      <details><summary>Kết quả mong đợi</summary>
+      2 query lúc 18:59:09 và 18:59:18 tới <b>rjj.store</b>, <code>QueryStatus = 9003</code> (tên miền không tồn tại / không phân giải được), <code>QueryResults = -</code>. Không có Event ID 3 nào vì không có IP để kết nối.</details>
+      <p><b>Bonus — xem toàn bộ "nhật ký" của malware</b> (mọi Event ID mang GUID của nó):</p>
+<pre><code><span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.ProcessGuid <span class="k">-eq</span> <span class="v">$Mal</span>.ProcessGuid } |
+      <span class="k">Select-Object</span> RecordId, Time, EventId, Image, QueryName</code></pre>
+      <p class="muted">→ ID 1 (bắt đầu) → ID 22 ×2 (tra DNS) → ID 5 (kết thúc lúc 18:59:37).</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B6</span>Vẽ cây process cha – con</h3>
+<pre><code><span class="k">function</span> Show-Tree(<span class="v">$Guid</span>, <span class="v">$Indent</span> = 0) {
+    <span class="v">$kids</span> = <span class="v">$Ev</span> | <span class="k">Where-Object</span> { <span class="v">$_</span>.EventId <span class="k">-eq</span> 1 <span class="k">-and</span> <span class="v">$_</span>.ParentProcessGuid <span class="k">-eq</span> <span class="v">$Guid</span> }
+    <span class="k">foreach</span> (<span class="v">$k</span> <span class="k">in</span> <span class="v">$kids</span>) {
+        <span class="s">'{0}|-- [{1}] {2}'</span> -f (<span class="s">' '</span> * <span class="v">$Indent</span>), <span class="v">$k</span>.ProcessId, <span class="v">$k</span>.CommandLine
+        Show-Tree <span class="v">$k</span>.ProcessGuid (<span class="v">$Indent</span> + 4)
+    }
+}
+Show-Tree <span class="s">'{c5d2b969-2e42-682b-4a02-000000001801}'</span>   <span class="c"># explorer.exe (PID 2788)</span>
+Show-Tree <span class="s">'{c5d2b969-ce8e-682c-e604-000000001801}'</span>   <span class="c"># msedge.exe  (PID 3504)</span></code></pre>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">⚡</span>Cách lọc nhanh hơn khi log lớn: lọc ngay lúc đọc</h3>
+      <p>Với log hàng trăm nghìn event, đừng nạp hết rồi mới <code>Where-Object</code>. Hãy để Windows lọc sẵn:</p>
+<pre><code><span class="c"># Theo Event ID</span>
+<span class="k">Get-WinEvent</span> -FilterHashtable @{ Path = <span class="v">$Path</span>; Id = 22 }
+
+<span class="c"># Theo Event ID + giá trị field (XPath, so khớp CHÍNH XÁC, không có "contains")</span>
+<span class="k">Get-WinEvent</span> -Path <span class="v">$Path</span> -FilterXPath <span class="s">"*[System[EventID=22] and EventData[Data[@Name='ProcessId']='5484']]"</span> |
+    <span class="k">Format-List</span> TimeCreated, Message</code></pre>
+    </div>
+  </div>
+
+  <!-- ===== EVENT VIEWER ===== -->
+  <div class="panel" id="ev">
+    <div class="step">
+      <h3><span class="stepno">B0</span>Mở file .evtx (và vai trò của file .MTA)</h3>
+      <ol>
+        <li>Tạo một thư mục, ví dụ <code>C:\Labs\</code>, đặt <code>Phishing-Sysmon.evtx</code> vào đó.</li>
+        <li>Tạo thư mục con <code>C:\Labs\LocaleMetaData\</code> và đặt file <code>Phishing-Sysmon_1033.MTA</code> vào (bỏ phần tiền tố lạ nếu tên file bị đổi khi tải lên/xuống).</li>
+        <li><span class="kbd">Win</span>+<span class="kbd">R</span> → <code>eventvwr.msc</code> → menu <b>Action → Open Saved Log…</b> → chọn file .evtx → đặt tên → OK. Log hiện trong <b>Saved Logs</b>.</li>
+      </ol>
+      <div class="box tip"><b>File .MTA là gì?</b> Nó giống <b>cuốn từ điển đi kèm</b>: chứa các chuỗi mô tả như "Process Create (rule: ProcessCreate)", "File created"… Nếu máy bạn <i>không cài Sysmon</i> mà thiếu file này, tab General sẽ báo <i>"The description for Event ID … cannot be found"</i> và cột Task Category trống. Dữ liệu vẫn còn nguyên trong tab <b>Details</b>, nhưng có cuốn từ điển thì đọc dễ hơn nhiều, và chức năng <b>Find</b> mới tìm được trong phần mô tả.</div>
+      <p><b>Đọc một event ở đâu?</b> Chọn event → khung dưới:</p>
+      <ul>
+        <li><b>General</b>: mô tả dạng văn bản (UtcTime, ProcessId, Image…) — đọc nhanh.</li>
+        <li><b>Details → Friendly View</b>: mở mục <b>EventData</b>, mỗi dòng là một field. <b>Details → XML View</b>: thấy đúng tên field (<code>&lt;Data Name="ProcessGuid"&gt;</code>) để viết filter XPath.</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B1</span>Nhìn tổng quan</h3>
+      <ul>
+        <li>Bấm vào tiêu đề cột <b>Event ID</b> để sắp xếp, hoặc cột <b>Task Category</b> để gom theo loại.</li>
+        <li>Bấm cột <b>Date and Time</b> để sắp theo thời gian (cũ → mới) — đọc như xem lại băng camera.</li>
+      </ul>
+      <div class="box warn">Cột <b>Date and Time</b> hiển thị theo múi giờ máy bạn (Việt Nam UTC+7 → 21/05/2025 01:58). Field <code>UtcTime</code> trong event là giờ UTC (2025-05-20 18:58). Khi đối chiếu với đề bài hoặc log khác, nhớ quy đổi.</div>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B2</span>File download qua browser <span class="pill">ID 11</span> <span class="pill">ID 15</span></h3>
+      <ol>
+        <li>Khung phải (Actions) → <b>Filter Current Log…</b> → ô <b>&lt;All Event IDs&gt;</b> gõ <code>11,15</code> → OK.</li>
+        <li>Chọn lần lượt từng event, tab General, nhìn dòng <code>Image:</code> — tìm các dòng có <code>msedge.exe</code>.</li>
+        <li>Đọc <code>TargetFilename:</code> → thấy <code>…\Downloads\Unconfirmed 109024.crdownload</code> rồi <code>…\Downloads\top-cats.zip</code>.</li>
+        <li>Xác nhận URL: Actions → <b>Find…</b> → gõ <code>HostUrl</code> → Find Next. Event 15 (Record 4822) có <code>Contents: … HostUrl=http://10.14.97.15/top-cats-2025/top-cats.zip</code>.</li>
+      </ol>
+      <p class="muted">Muốn xem Record ID: tab Details → Friendly View → mở mục System → <code>EventRecordID</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B3</span>Thư mục giải nén <span class="pill">ID 11</span> <span class="pill">ID 15</span></h3>
+      <ol>
+        <li>Vẫn giữ filter <code>11,15</code>. Tìm event có <code>Image: C:\Windows\Explorer.EXE</code>.</li>
+        <li>Event 11 lúc 18:58:43: <code>TargetFilename: C:\Users\Administrator\Pictures\best-cat.jpg.exe</code>.</li>
+        <li>Xác nhận nó đến từ zip: <b>Find…</b> → <code>ReferrerUrl=C:\</code> → các event 15 có <code>ReferrerUrl=C:\Users\Administrator\Downloads\top-cats.zip</code>, đều nằm trong <code>…\Pictures\</code>.</li>
+        <li>Mở tab Details của event Explorer, <b>copy <code>ProcessGuid</code></b> = <code>{c5d2b969-2e42-682b-4a02-000000001801}</code>. Dùng ở B4.</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B4</span>PID của malware <span class="pill">ID 1</span></h3>
+      <p><b>Cách dễ:</b> Filter Current Log → Event IDs: <code>1</code> → xem cột thời gian ngay sau lúc giải nén (18:58:43) và đọc dòng <code>Image</code>.</p>
+      <p><b>Cách chuẩn (lọc theo cha):</b> chỉ lấy process có cha là explorer:</p>
+      <ol>
+        <li>Filter Current Log → Event IDs <code>1</code> → chuyển sang tab <b>XML</b> → tick <b>Edit query manually</b> (bấm Yes).</li>
+        <li><b>Giữ nguyên</b> các dòng <code>Path="file://…"</code> mà Event Viewer tự sinh, chỉ thay nội dung trong <code>&lt;Select&gt;</code>:</li>
+      </ol>
+<pre><code>&lt;QueryList&gt;
+  &lt;Query Id="0" Path="file://C:\Labs\Phishing-Sysmon.evtx"&gt;
+    &lt;Select Path="file://C:\Labs\Phishing-Sysmon.evtx"&gt;
+      *[System[(EventID=1)]]
+      and
+      *[EventData[Data[@Name='ParentProcessGuid']='{c5d2b969-2e42-682b-4a02-000000001801}']]
+    &lt;/Select&gt;
+  &lt;/Query&gt;
+&lt;/QueryList&gt;</code></pre>
+      <p>Kết quả còn 3 event: 2 × <code>mspaint.exe</code> (mở ảnh mồi) và <code>best-cat.jpg.exe</code> → <code>ProcessId: 5484</code>. Copy <code>ProcessGuid</code> của nó: <code>{c5d2b969-d0fa-682c-2b05-000000001801}</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B5</span>Domain độc hại <span class="pill">ID 22</span></h3>
+      <ol>
+        <li>Filter Current Log → Event IDs <code>22</code> → có 4 event. Hai cái của <code>SystemSettings.exe</code> (onecs-live.azureedge.net, của Microsoft) là nhiễu.</li>
+        <li>Hai cái còn lại có <code>Image: C:\Users\Administrator\Pictures\best-cat.jpg.exe</code>, <code>ProcessId: 5484</code> → <code>QueryName: rjj.store</code>.</li>
+      </ol>
+      <p>Lọc chính xác bằng XML (tab XML → Edit query manually):</p>
+<pre><code>*[System[(EventID=22)]]
+and
+*[EventData[Data[@Name='ProcessGuid']='{c5d2b969-d0fa-682c-2b05-000000001801}']]</code></pre>
+      <p class="muted">Bỏ <code>(EventID=22)</code>, chỉ để điều kiện ProcessGuid → thấy toàn bộ hoạt động của malware (ID 1, 22, 22, 5).</p>
+    </div>
+
+    <div class="step">
+      <h3><span class="stepno">B6</span>Đi ngược lên cha bằng Find</h3>
+      <ol>
+        <li>Mở event ID 1 của best-cat.jpg.exe, đọc <code>ParentProcessId: 2788</code>, <code>ParentImage: C:\Windows\explorer.exe</code>, copy <code>ParentProcessGuid</code>.</li>
+        <li><b>Clear Filter</b> → Actions → <b>Find…</b> → dán GUID → Find Next. Mỗi lần Find Next là nhảy tới event kế tiếp có GUID đó (ID 11, 2, 15, 13 của explorer, và các ID 1 của con nó).</li>
+      </ol>
+      <div class="box warn">Explorer (PID 2788) đã chạy <b>trước</b> khi log được thu, nên <b>không có event ID 1 của chính explorer</b>. Ta xác nhận nó qua các event khác mang cùng <code>ProcessGuid</code>. Đây là chuyện rất hay gặp: log chỉ là "đoạn băng" ghi trong một khoảng thời gian.</div>
+    </div>
+
+    <div class="box tip"><b>Giới hạn của XPath trong Event Viewer:</b> chỉ so khớp <b>bằng chính xác</b> (<code>=</code>), không có <code>contains()</code> hay wildcard. Muốn tìm theo một phần chuỗi (vd. "HostUrl", ".jpg.exe") thì dùng <b>Find…</b>, hoặc chuyển sang PowerShell với <code>-match</code>.</div>
+  </div>
+</section>
+
+<!-- ============ PARENT / CHILD ============ -->
+<section id="parent">
+  <h2>👪 Làm sao biết event này là "con" của event khác?</h2>
+  <p>Nghĩ như <b>sổ hộ khẩu</b>: mỗi event ID 1 (Process Create) ghi tên đứa trẻ (<code>Image</code>), số CCCD của nó (<code>ProcessGuid</code>) và số CCCD của bố/mẹ (<code>ParentProcessGuid</code>). Muốn tìm bố → lấy <code>ParentProcessGuid</code> của con đi dò cột <code>ProcessGuid</code> ở các event khác.</p>
+
+  <div class="two">
+    <div>
+      <h3>Quy tắc nối</h3>
+      <table>
+        <tr><th>Muốn biết</th><th>So field</th><th>với field</th></tr>
+        <tr><td>Cha của process X</td><td><code>ParentProcessGuid</code> của X (ID 1)</td><td><code>ProcessGuid</code> ở event bất kỳ</td></tr>
+        <tr><td>Các con của X</td><td><code>ProcessGuid</code> của X</td><td><code>ParentProcessGuid</code> ở các ID 1</td></tr>
+        <tr><td>X đã làm gì (file, DNS, registry…)</td><td><code>ProcessGuid</code> của X</td><td><code>ProcessGuid</code> ở ID 2, 3, 5, 11, 13, 15, 22…</td></tr>
+        <tr><td>X truy cập process khác (ID 10)</td><td><code>ProcessGuid</code> của X</td><td><code>SourceProcessGUID</code> / <code>TargetProcessGUID</code></td></tr>
+      </table>
+      <div class="box warn">Ở ID 10 tên field là <code>SourceProcessGUID</code> (chữ <b>GUID</b> viết hoa). PowerShell không phân biệt hoa/thường, nhưng XPath trong Event Viewer thì <b>có</b> phân biệt, phải gõ đúng.</div>
+    </div>
+    <div>
+      <h3>Cây process trong file này</h3>
+<div class="tree"><span class="g">(chạy trước khi ghi log)</span>
+explorer.exe  PID 2788
+<span class="g">  GUID {c5d2b969-2e42-682b-4a02-…}</span>
+ ├─ mspaint.exe nice-cat-1.jpg   PID 1668
+ ├─ mspaint.exe nice-cat-2.png   PID 4468
+ └─ <span class="m">best-cat.jpg.exe   PID 5484</span>
+<span class="g">      GUID {c5d2b969-d0fa-682c-2b05-…}</span>
+      ├─ DNS → <span class="m">rjj.store</span>  (ID 22 ×2)
+      └─ terminated 18:59:37  (ID 5)
+
+msedge.exe  PID 3504 <span class="g">(browser chính)</span>
+ ├─ msedge … FileUtilService     PID 3324
+ ├─ msedge … Quarantine          PID 1316
+ │    └─ ghi top-cats.zip + Zone.Identifier
+ └─ … (2360, 6540, 2148)</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TIMELINE ============ -->
+<section id="timeline">
+  <h2>⏱️ Timeline tấn công (UTC, 2025-05-20)</h2>
+  <div class="tl">
+    <div class="it"><div class="t">18:58:27 · ID 11 · Rec 4810–4813</div>Edge (PID 3504) bắt đầu tải: tạo <code>.tmp</code> → <code>Unconfirmed 109024.crdownload</code> trong Downloads.</div>
+    <div class="it"><div class="t">18:58:28 · ID 15 · Rec 4816–4822</div>Tiến trình Quarantine của Edge (PID 1316) đổi tên thành <b>top-cats.zip</b> và dán Mark-of-the-Web: <code>HostUrl=http://10.14.97.15/top-cats-2025/top-cats.zip</code>.</div>
+    <div class="it"><div class="t">18:58:43 · ID 11, 2, 15 · Rec 4823–4830</div>Explorer (PID 2788) giải nén vào <b>C:\Users\Administrator\Pictures</b>: <code>best-cat.jpg.exe</code>, <code>nice-cat-1.jpg</code>, <code>nice-cat-2.png</code>. ID 2 = giữ timestamp gốc trong zip.</div>
+    <div class="it"><div class="t">18:58:48 / 18:58:57 · ID 1 · Rec 4831, 4838</div>User mở 2 ảnh mồi bằng mspaint (PID 1668, 4468) — trông hoàn toàn vô hại.</div>
+    <div class="it red"><div class="t">18:59:06 · ID 1 · Rec 4839</div>User double-click "best-cat.jpg" → chạy <b>best-cat.jpg.exe, PID 5484</b>, cha là explorer.exe. Ngay sau đó ID 12/13: Compatibility Assistant ghi nhận chương trình mới chạy.</div>
+    <div class="it red"><div class="t">18:59:09 / 18:59:18 · ID 22 · Rec 4842, 4843</div>Malware tra DNS <b>rjj.store</b> 2 lần → <code>QueryStatus 9003</code> (không phân giải được). Không có ID 3 → chưa kết nối được tới C2.</div>
+    <div class="it"><div class="t">18:59:37 · ID 5 · Rec 4844</div>best-cat.jpg.exe kết thúc.</div>
+  </div>
+</section>
+
+<!-- ============ PITFALLS ============ -->
+<section id="pitfalls">
+  <h2>⚠️ Bẫy thường gặp & cách lọc nhiễu</h2>
+  <table>
+    <tr><th>Hiện tượng</th><th>Giải thích</th></tr>
+    <tr><td>Thấy <code>svchost.exe</code> truy cập <code>lsass.exe</code> (ID 10)</td><td>Nghe đáng sợ (lsass = nơi giữ credential) nhưng <code>GrantedAccess 0x1000</code> chỉ là quyền query thông tin giới hạn, call trace qua <code>lsm.dll</code> là hoạt động bình thường của Windows. Dump credential thật thường có quyền như <code>0x1010</code>, <code>0x1410</code>, <code>0x1FFFFF</code>.</td></tr>
+    <tr><td>DNS <code>onecs-live.azureedge.net</code></td><td>Của SystemSettings.exe (Microsoft) → nhiễu.</td></tr>
+    <tr><td>Nhiều process <code>msedge.exe --type=utility</code></td><td>Kiến trúc đa tiến trình của Chromium: mỗi tab/dịch vụ là một process con. Chỉ cần để ý cái ghi file (Quarantine, PID 1316).</td></tr>
+    <tr><td><code>QueryStatus 9003</code></td><td>Mã lỗi Windows DNS <code>DNS_ERROR_RCODE_NAME_ERROR</code> = tên miền không tồn tại. <code>0</code> mới là thành công.</td></tr>
+    <tr><td>Dùng PID để nối chuỗi</td><td>PID có thể bị tái sử dụng sau khi process tắt. Luôn xác nhận lại bằng <code>ProcessGuid</code>.</td></tr>
+    <tr><td>Tên file <code>best-cat.jpg.exe</code></td><td>Kỹ thuật <b>đuôi kép</b>: Windows mặc định ẩn đuôi file đã biết, nên user thấy "best-cat.jpg". Đi kèm 2 ảnh thật để tạo lòng tin. Mẹo phòng thủ: bật <i>File name extensions</i> trong Explorer.</td></tr>
+  </table>
+
+  <div class="box ok"><b>Quy trình tổng quát áp dụng cho mọi bài phishing tương tự:</b><br>
+  ① Lọc ID 11/15 theo browser → tìm file tải về + URL nguồn (HostUrl).<br>
+  ② Lọc ID 11/15 theo explorer/7z/WinRAR + ReferrerUrl → tìm nơi giải nén.<br>
+  ③ Lọc ID 1 theo đường dẫn ở bước ② hoặc theo cha là explorer → tìm process độc, ghi lại PID + GUID.<br>
+  ④ Lọc ID 22 và 3 theo GUID đó → domain / IP C2.<br>
+  ⑤ Lọc mọi event theo GUID → toàn bộ hành vi (persistence ở ID 12/13, file thả thêm ở ID 11, process con ở ID 1…).</div>
+</section>
+
+</main>
+<footer>Phân tích từ Phishing-Sysmon.evtx — 48 event, Record ID 4798–4845.</footer>
+
+<script>
+  document.querySelectorAll('.tabs button').forEach(function(b){
+    b.addEventListener('click',function(){
+      document.querySelectorAll('.tabs button').forEach(function(x){x.classList.remove('active')});
+      document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});
+      b.classList.add('active');
+      document.getElementById(b.dataset.tab).classList.add('active');
+    });
+  });
+  document.querySelectorAll('pre').forEach(function(pre){
+    var btn=document.createElement('button');
+    btn.className='copy'; btn.textContent='Copy';
+    btn.addEventListener('click',function(){
+      var txt=pre.querySelector('code').innerText;
+      try{
+        navigator.clipboard.writeText(txt).then(function(){btn.textContent='Đã copy ✓';setTimeout(function(){btn.textContent='Copy'},1500)});
+      }catch(e){
+        var r=document.createRange(); r.selectNodeContents(pre.querySelector('code'));
+        var s=window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        btn.textContent='Ctrl+C';
+      }
+    });
+    pre.appendChild(btn);
+  });
+</script>
+</body>
+</html>
