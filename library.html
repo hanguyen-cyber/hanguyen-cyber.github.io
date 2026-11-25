@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library — Ha Nguyen</title>
+<meta name="description" content="Personal security library: cheat sheets, lab notes, vulnerability write-ups. / Kho tài liệu bảo mật cá nhân.">
+<link rel="icon" type="image/svg+xml" href="favicon/favicon-terminal.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* ===== Colors — same as portfolio ===== */
+  :root{
+    --bg:#f5f2ec; --bg-alt:#ebe6dd; --card:#fbf9f5;
+    --ink:#1c1b19; --ink-2:#3d3a35; --muted:#5c5852; --line-soft:#d6d0c6;
+    --accent:oklch(0.55 0.15 35);
+    --pad:clamp(20px,4vw,48px);
+  }
+  /* ===== Language: elements with class "en" / "vi" show only in that language ===== */
+  html[lang="en"] .vi, html[lang="vi"] .en{display:none !important}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'IBM Plex Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:var(--ink);text-decoration-thickness:1px;text-underline-offset:3px}
+  a:hover{color:var(--accent)}
+  h1,h2,h3{font-family:'Instrument Serif',serif;font-weight:400;margin:0}
+  p{margin:0;text-wrap:pretty}
+  .wrap{max-width:1200px;margin:0 auto;padding:0 var(--pad)}
+  .mono{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+  .topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-bottom:1px solid var(--ink);padding:28px 0 14px}
+  .topbar a{color:var(--muted);text-decoration:none}
+  .topbar a:hover{color:var(--accent)}
+  .topbar .right{display:flex;align-items:center;gap:18px}
+  .lang{display:flex;border:1px solid var(--ink)}
+  .lang button{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;border:0;background:transparent;color:var(--ink);padding:6px 10px;cursor:pointer}
+  .lang button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+  .masthead{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:24px 48px;align-items:end;padding:48px 0 32px;border-bottom:1px solid var(--ink)}
+  .masthead h1{font-size:clamp(56px,10vw,128px);line-height:.9;letter-spacing:-.02em}
+  .masthead h1 em{color:var(--accent)}
+  .masthead p{font-size:17px;line-height:1.65;color:var(--ink-2);max-width:520px}
+
+  .tools{display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center;justify-content:space-between;padding:24px 0;border-bottom:1px solid var(--ink)}
+  .search{flex:1 1 280px;max-width:420px;display:flex;align-items:center;gap:10px;border:1px solid var(--ink);background:var(--card);padding:0 14px}
+  .search input{flex:1;border:0;background:transparent;font:inherit;font-size:15px;padding:12px 0;outline:none;color:var(--ink)}
+  .filters{display:flex;flex-wrap:wrap;gap:8px}
+  .filters button{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--ink);background:transparent;color:var(--ink);padding:9px 14px;cursor:pointer;transition:background .15s}
+  .filters button:hover{background:var(--bg-alt)}
+  .filters button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+
+  .list{display:flex;flex-direction:column}
+  .item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px 28px;align-items:start;padding:28px 0;border-bottom:1px solid var(--ink);text-decoration:none;color:var(--ink);transition:padding .2s,background .2s}
+  .item:hover{padding-left:12px;color:var(--ink);background:var(--bg-alt)}
+  .item .n{font-family:'IBM Plex Mono',monospace;font-size:14px;color:var(--accent);padding-top:8px}
+  .item .main{display:flex;flex-direction:column;gap:10px}
+  .item h3{font-size:clamp(26px,3vw,36px);line-height:1.1}
+  .item p{font-size:15px;line-height:1.6;color:var(--ink-2);max-width:680px}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tags span{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.04em;border:1px solid var(--line-soft);padding:3px 8px;color:var(--muted)}
+  .item .side{display:flex;flex-direction:column;align-items:flex-end;gap:8px;padding-top:8px;text-align:right;white-space:nowrap}
+  .item .open{font-weight:500;font-size:14px}
+  @media (max-width:640px){
+    .item{grid-template-columns:40px minmax(0,1fr)}
+    .item .side{grid-column:2;align-items:flex-start;flex-direction:row;gap:16px;padding-top:0}
+  }
+  .group{font-size:clamp(28px,3.4vw,40px);line-height:1.1;padding:56px 0 18px;border-bottom:1px solid var(--ink)}
+  .group:first-child{padding-top:32px}
+  .count{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--muted)}
+  .empty{display:none;padding:48px 0;font-size:16px;color:var(--muted)}
+
+  footer .bar{border-top:1px solid var(--ink);margin-top:64px;padding:20px 0 36px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+  footer strong{color:var(--ink)}
+</style>
+<script>
+  // Pick language before page paints: saved choice → browser language → English
+  (function(){
+    var l = localStorage.getItem('site-lang') || ((navigator.language||'').toLowerCase().startsWith('vi') ? 'vi' : 'en');
+    document.documentElement.lang = l;
+  })();
+</script>
+</head>
+<body>
+
+<header class="wrap">
+  <div class="topbar mono">
+    <a href="index.html">← Ha Nguyen · Portfolio</a>
+    <div class="right">
+      <span class="en">Document library</span><span class="vi">Thư viện tài liệu</span>
+      <div class="lang" role="group" aria-label="Language">
+        <button data-lang="en">EN</button><button data-lang="vi">VI</button>
+      </div>
+    </div>
+  </div>
+  <div class="masthead">
+    <h1 class="en">The <em>library.</em></h1>
+    <h1 class="vi">Thư <em>viện.</em></h1>
+    <p class="en">Investigation guides, cheat sheets and vulnerability write-ups I use often — 16 documents collected in one place for quick reference.</p>
+    <p class="vi">Hướng dẫn điều tra, cheat sheet và phân tích lỗ hổng tôi thường dùng — 16 tài liệu gom về một chỗ để tra cứu nhanh.</p>
+  </div>
+  <div class="tools">
+    <label class="search">
+      <span class="mono"><span class="en">Search</span><span class="vi">Tìm</span></span>
+      <input id="q" type="search" data-ph-en="Title, topic, tool…" data-ph-vi="Tên, chủ đề, công cụ…">
+    </label>
+    <!-- Filters: data-filter must match a document's data-cat -->
+    <div class="filters" id="filters">
+      <button data-filter="all" aria-pressed="true"><span class="en">All</span><span class="vi">Tất cả</span></button>
+      <button data-filter="lab"><span class="en">Investigations</span><span class="vi">Điều tra</span></button>
+      <button data-filter="ref"><span class="en">Cheat sheets</span><span class="vi">Tra cứu</span></button>
+      <button data-filter="tools"><span class="en">Tools</span><span class="vi">Công cụ</span></button>
+      <button data-filter="intel">Threat Intel / CVE</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="list" id="list">
+
+    <!--
+      ===== ADD A NEW DOCUMENT / THÊM TÀI LIỆU MỚI =====
+      1. Upload the file to docs/ (no spaces or accents in the file name).
+      2. Copy one <a class="item"> block, paste it under the right group heading, then edit:
+         href, data-cat (lab | ref | tools | intel), number, title & description (.en and .vi), tags.
+      Language badge: "VI" = document in Vietnamese, "EN/VI" = bilingual.
+    -->
+
+    <!-- ===== INVESTIGATIONS & LAB WALKTHROUGHS ===== -->
+    <h2 class="group" data-group="lab"><span class="en">Investigations &amp; lab walkthroughs</span><span class="vi">Điều tra &amp; lab</span></h2>
+
+    <a class="item" href="docs/rdp-bruteforce-investigation.html" data-cat="lab">
+      <span class="n">01</span>
+      <div class="main">
+        <h3 class="en">RDP Brute-Force Investigation — Security log</h3>
+        <h3 class="vi">Điều tra RDP Brute Force từ Security log</h3>
+        <p class="en">Step-by-step analysis of RDP-Security.evtx: finding the brute-force burst, the successful logon and the attacker’s source IP.</p>
+        <p class="vi">Phân tích RDP-Security.evtx từng bước: tìm đợt brute-force, lần đăng nhập thành công và IP của kẻ tấn công.</p>
+        <div class="tags"><span>RDP</span><span>4625</span><span>4624</span><span>EVTX</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Investigation</span><span class="vi">Điều tra</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/rdp-breach-evtx.html" data-cat="lab">
+      <span class="n">02</span>
+      <div class="main">
+        <h3 class="en">Spotting an RDP Breach in .evtx</h3>
+        <h3 class="vi">Nhận biết RDP Breach trên file .evtx</h3>
+        <p class="en">Self-study guide in the style of Windows Threat Detection 1: reading Security.evtx for brute-force and successful attacker logons.</p>
+        <p class="vi">Tài liệu tự học theo room Windows Threat Detection 1: đọc Security.evtx tìm dấu vết brute-force và đăng nhập thành công.</p>
+        <div class="tags"><span>RDP</span><span>T1110</span><span>T1133</span><span>TryHackMe</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Investigation</span><span class="vi">Điều tra</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/phishing-sysmon.html" data-cat="lab">
+      <span class="n">03</span>
+      <div class="main">
+        <h3 class="en">Investigating Phishing-Sysmon.evtx</h3>
+        <h3 class="vi">Điều tra Phishing-Sysmon.evtx</h3>
+        <p class="en">From browser download → extracted folder → malware PID → malicious domain, using both PowerShell and Event Viewer.</p>
+        <p class="vi">Từ file tải qua browser → thư mục giải nén → PID malware → domain độc hại, làm bằng PowerShell và Event Viewer.</p>
+        <div class="tags"><span>Sysmon</span><span>Phishing</span><span>PowerShell</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Investigation</span><span class="vi">Điều tra</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/usb-sysmon.html" data-cat="lab">
+      <span class="n">04</span>
+      <div class="main">
+        <h3 class="en">Investigating USB-Sysmon.evtx</h3>
+        <h3 class="vi">Điều tra USB-Sysmon.evtx</h3>
+        <p class="en">Trace the file run from USB → the dropped malware → the next USB it spread to, with PowerShell and Event Viewer.</p>
+        <p class="vi">Lần theo file chạy từ USB → malware thả xuống ổ đĩa → USB khác bị lây, bằng PowerShell và Event Viewer.</p>
+        <div class="tags"><span>Sysmon</span><span>USB</span><span>Malware</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Investigation</span><span class="vi">Điều tra</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/the-interview-dfir.html" data-cat="lab">
+      <span class="n">05</span>
+      <div class="main">
+        <h3 class="en">The Interview — Thinking Like a DFIR Investigator</h3>
+        <h3 class="vi">The Interview — Lối tư duy của người điều tra số</h3>
+        <p class="en">Full walkthrough of the TryHackMe “The Interview” lab (Hard), focused on how an expert reasons from each finding.</p>
+        <p class="vi">Hướng dẫn toàn bộ lab TryHackMe “The Interview” (Hard), tập trung vào cách chuyên gia suy luận từ mỗi phát hiện.</p>
+        <div class="tags"><span>DFIR</span><span>TryHackMe</span><span>Hard</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Investigation</span><span class="vi">Điều tra</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <!-- ===== CHEAT SHEETS & REFERENCES ===== -->
+    <h2 class="group" data-group="ref"><span class="en">Cheat sheets &amp; references</span><span class="vi">Tra cứu &amp; cheat sheet</span></h2>
+
+    <a class="item" href="docs/windows-event-id-soc.html" data-cat="ref">
+      <span class="n">06</span>
+      <div class="main">
+        <h3 class="en">Windows Event IDs for SOC</h3>
+        <h3 class="vi">Windows Event ID cho SOC</h3>
+        <p class="en">Quick lookup of the Event IDs used most in Windows triage. Click an ID to copy the PowerShell filter for it.</p>
+        <p class="vi">Bảng tra nhanh các Event ID hay dùng khi triage Windows. Bấm vào ID để copy lệnh PowerShell lọc event đó.</p>
+        <div class="tags"><span>Event ID</span><span>Windows</span><span>PowerShell</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/get-winevent-sysmon-playbook.html" data-cat="ref">
+      <span class="n">07</span>
+      <div class="main">
+        <h3 class="en">Get-WinEvent Playbook for Sysmon</h3>
+        <h3 class="vi">Playbook Get-WinEvent cho Sysmon</h3>
+        <p class="en">Built on TryHackMe Sysmon “Cutting out the Noise”: syntax, reading event fields and hunting recipes by technique.</p>
+        <p class="vi">Dựa trên room TryHackMe Sysmon “Cutting out the Noise”: cú pháp, cách đọc trường dữ liệu và công thức săn theo kỹ thuật.</p>
+        <div class="tags"><span>Sysmon</span><span>Get-WinEvent</span><span>Hunting</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/discovery-commands.html" data-cat="ref">
+      <span class="n">08</span>
+      <div class="main">
+        <h3 class="en">Discovery Commands — Threat Actor Cheat Sheet</h3>
+        <h3 class="vi">Discovery Commands — Lệnh “định vị” hệ thống của Threat Actor</h3>
+        <p class="en">Commands attackers use to map a system (MITRE TA0007), from Windows Threat Detection 2.</p>
+        <p class="vi">Các lệnh kẻ tấn công dùng để thăm dò hệ thống (MITRE TA0007), theo Windows Threat Detection 2.</p>
+        <div class="tags"><span>MITRE</span><span>TA0007</span><span>Windows</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/detecting-collection.html" data-cat="ref">
+      <span class="n">09</span>
+      <div class="main">
+        <h3 class="en">Detecting Collection — Blue Team Cheat Sheet</h3>
+        <h3 class="vi">Detecting Collection — Phát hiện kẻ tấn công “gom đồ”</h3>
+        <p class="en">Command-line indicators (Sysmon 1 / 4688), a log-source map, PowerShell queries, SIEM rule ideas and a logging checklist.</p>
+        <p class="vi">Dấu hiệu dòng lệnh (Sysmon 1 / 4688), bản đồ nguồn log, truy vấn PowerShell, ý tưởng rule SIEM và checklist cấu hình log.</p>
+        <div class="tags"><span>SOC</span><span>Sysmon</span><span>SIEM</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/ubuntu-log-commands.html" data-cat="ref">
+      <span class="n">10</span>
+      <div class="main">
+        <h3>Ubuntu Log Command Explainer</h3>
+        <p class="en">Paste a log-filtering command to see what each flag does, or look up flags for common Ubuntu log commands.</p>
+        <p class="vi">Dán câu lệnh lọc log để xem ý nghĩa từng tham số, hoặc tra tham số các lệnh hay dùng khi điều tra log Ubuntu.</p>
+        <div class="tags"><span>Linux</span><span>Ubuntu</span><span>Logs</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/snort-handbook.html" data-cat="ref">
+      <span class="n">11</span>
+      <div class="main">
+        <h3 class="en">Snort Handbook</h3>
+        <h3 class="vi">Sổ tay Snort</h3>
+        <p class="en">Snort 2 modes, command-line flags, rule writing and the config entries you need to know.</p>
+        <p class="vi">Bốn chế độ hoạt động, tham số dòng lệnh, cách viết rule và các mục cần biết trong file cấu hình Snort 2.</p>
+        <div class="tags"><span>Snort</span><span>IDS</span><span>Rules</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Cheat sheet</span><span class="vi">Tra cứu</span> · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <!-- ===== TOOL DEFINITIONS ===== -->
+    <h2 class="group" data-group="tools"><span class="en">Tool definitions</span><span class="vi">Định nghĩa công cụ</span></h2>
+
+    <a class="item" href="docs/iwr-invoke-webrequest.html" data-cat="tools">
+      <span class="n">12</span>
+      <div class="main">
+        <h3 class="en">IWR (Invoke-WebRequest) — Definition &amp; Guide</h3>
+        <h3 class="vi">IWR (Invoke-WebRequest) — Định nghĩa &amp; Hướng dẫn</h3>
+        <p class="en">PowerShell’s web-content download cmdlet: syntax, common parameters and how attackers abuse it.</p>
+        <p class="vi">Cmdlet tải nội dung web của PowerShell: cú pháp, tham số thường dùng và cách bị lạm dụng.</p>
+        <div class="tags"><span>PowerShell</span><span>LOLBin</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Tool</span><span class="vi">Công cụ</span> · EN/VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/certutil.html" data-cat="tools">
+      <span class="n">13</span>
+      <div class="main">
+        <h3 class="en">certutil.exe — Definition &amp; Guide</h3>
+        <h3 class="vi">certutil.exe — Định nghĩa &amp; Hướng dẫn</h3>
+        <p class="en">Windows certificate tool, and why defenders watch it as a download and decode LOLBin.</p>
+        <p class="vi">Công cụ quản lý chứng chỉ của Windows, và lý do Blue Team theo dõi nó như một LOLBin tải và giải mã file.</p>
+        <div class="tags"><span>Windows</span><span>LOLBin</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Tool</span><span class="vi">Công cụ</span> · EN/VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/auditd.html" data-cat="tools">
+      <span class="n">14</span>
+      <div class="main">
+        <h3 class="en">auditd (Linux Audit Daemon) — Definition &amp; Guide</h3>
+        <h3 class="vi">auditd (Linux Audit Daemon) — Định nghĩa &amp; Hướng dẫn</h3>
+        <p class="en">Kernel-level runtime auditing for SOC investigations: rules, logs and searching with ausearch.</p>
+        <p class="vi">Ghi nhật ký kiểm toán từ kernel phục vụ điều tra SOC: rule, log và tìm kiếm bằng ausearch.</p>
+        <div class="tags"><span>Linux</span><span>Audit</span></div>
+      </div>
+      <div class="side"><span class="mono"><span class="en">Tool</span><span class="vi">Công cụ</span> · EN/VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <!-- ===== THREAT INTEL & VULNERABILITIES ===== -->
+    <h2 class="group" data-group="intel"><span class="en">Threat intel &amp; vulnerabilities</span><span class="vi">Threat intel &amp; lỗ hổng</span></h2>
+
+    <a class="item" href="docs/continental-stealer.html" data-cat="intel">
+      <span class="n">15</span>
+      <div class="main">
+        <h3 class="en">Continental Stealer — A Defender’s Analysis</h3>
+        <h3 class="vi">Phân tích Continental Stealer — Góc nhìn phòng thủ</h3>
+        <p class="en">The infostealer-as-a-service model, its infection chain and what a SOC can detect, based on Cyberint’s report.</p>
+        <p class="vi">Mô hình infostealer cho thuê, chuỗi lây nhiễm và những gì SOC có thể phát hiện, dựa trên báo cáo của Cyberint.</p>
+        <div class="tags"><span>Infostealer</span><span>MaaS</span><span>Threat Intel</span></div>
+      </div>
+      <div class="side"><span class="mono">Threat Intel / CVE · VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+    <a class="item" href="docs/php2shell.html" data-cat="intel">
+      <span class="n">16</span>
+      <div class="main">
+        <h3 class="en">PHP2Shell — Walkthrough &amp; Teaching Guide</h3>
+        <h3 class="vi">PHP2Shell — Giải thích &amp; Giảng dạy</h3>
+        <p class="en">From the harmless Upload Progress feature to command execution on the server: the full chain, a glossary, detection and fixes.</p>
+        <p class="vi">Từ tính năng Upload Progress vô hại đến chiếm quyền chạy lệnh trên máy chủ: quy trình, thuật ngữ, cách phát hiện và khắc phục.</p>
+        <div class="tags"><span>PHP</span><span>RCE</span><span>CVE</span></div>
+      </div>
+      <div class="side"><span class="mono">Threat Intel / CVE · EN/VI</span><span class="open"><span class="en">Open ↗</span><span class="vi">Mở ↗</span></span></div>
+    </a>
+
+  </div>
+  <p class="empty" id="empty"><span class="en">No matching documents.</span><span class="vi">Không tìm thấy tài liệu phù hợp.</span></p>
+</main>
+
+<footer class="wrap">
+  <div class="bar">
+    <span><strong>Ha Nguyen</strong> · <span class="en">Document library</span><span class="vi">Thư viện tài liệu</span></span>
+    <a href="index.html"><span class="en">← Back to portfolio</span><span class="vi">← Về portfolio</span></a>
+  </div>
+</footer>
+
+<script>
+  // Language switch + search + filter — no need to edit
+  const titles = { en: 'Library — Ha Nguyen', vi: 'Thư viện — Ha Nguyen' };
+  const q = document.getElementById('q');
+  function setLang(l){
+    document.documentElement.lang = l;
+    localStorage.setItem('site-lang', l);
+    document.title = titles[l];
+    q.placeholder = q.dataset['ph' + (l === 'en' ? 'En' : 'Vi')];
+    document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', b.dataset.lang === l));
+    apply();
+  }
+  document.querySelectorAll('.lang button').forEach(b => b.addEventListener('click', () => setLang(b.dataset.lang)));
+
+  const items = [...document.querySelectorAll('.item')];
+  const btns = [...document.querySelectorAll('#filters button')];
+  let cat = 'all';
+  function apply(){
+    const term = q.value.trim().toLowerCase();
+    let shown = 0;
+    items.forEach(el => {
+      const ok = (cat === 'all' || el.dataset.cat === cat) && el.textContent.toLowerCase().includes(term);
+      el.style.display = ok ? '' : 'none';
+      if (ok) shown++;
+    });
+    document.querySelectorAll('.group').forEach(h => {
+      h.style.display = items.some(el => el.dataset.cat === h.dataset.group && el.style.display !== 'none') ? '' : 'none';
+    });
+    document.getElementById('empty').style.display = shown ? 'none' : 'block';
+  }
+  btns.forEach(b => b.addEventListener('click', () => {
+    cat = b.dataset.filter;
+    btns.forEach(x => x.setAttribute('aria-pressed', x === b));
+    apply();
+  }));
+  q.addEventListener('input', apply);
+  setLang(document.documentElement.lang);
+</script>
+</body>
+</html>
